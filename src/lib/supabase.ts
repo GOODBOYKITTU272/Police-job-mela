@@ -92,23 +92,23 @@ export async function getCandidateById(input: string): Promise<CandidateWithAppl
   
   let candidates: Candidate[] = [];
 
-  // 1. Try lookup by ID (e.g. CID100)
-  const { data: idMatches } = await supabase
+  // 1. Try exact match on ID, Phone, or Email
+  const { data: exactMatch } = await supabase
     .from('candidates')
     .select('*')
-    .ilike('id', query);
+    .or(`id.eq.${query},phone.eq.${query},email.eq.${query}`);
 
-  if (idMatches && idMatches.length > 0) {
-    candidates = idMatches;
+  if (exactMatch && exactMatch.length > 0) {
+    candidates = exactMatch;
   } else {
-    // 2. Try lookup by Phone (e.g. 7997832837)
-    const { data: phoneMatches } = await supabase
+    // 2. If no exact match, try partial match on phone or email
+    const { data: partialMatch } = await supabase
       .from('candidates')
       .select('*')
-      .eq('phone', query);
+      .or(`phone.ilike.%${query}%,email.ilike.%${query}%`);
     
-    if (phoneMatches) {
-      candidates = phoneMatches;
+    if (partialMatch) {
+      candidates = partialMatch;
     }
   }
 

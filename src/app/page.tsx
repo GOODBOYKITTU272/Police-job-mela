@@ -74,20 +74,6 @@ export default function Home() {
         </div>
 
 
-        {/* Quick Links */}
-        <div
-          className="animate-fade-in-up stagger-4"
-          style={styles.linksRow}
-        >
-          <a
-            href="/admin"
-            className="btn-secondary"
-            style={styles.linkBtn}
-            id="admin-link"
-          >
-            📈 Admin Dashboard
-          </a>
-        </div>
 
         {/* Footer */}
         <footer style={styles.footer}>
