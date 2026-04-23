@@ -73,19 +73,36 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="animate-fade-in-up stagger-3" style={styles.hrCard}>
-          <h2 style={styles.hrTitle}>For Company HR Teams</h2>
-          <p style={styles.hrSub}>
-            Login to review shortlisted candidates and hiring data.
-          </p>
-          <button
-            className="btn-primary"
-            onClick={() => router.push("/hr/login")}
-            style={styles.hrBtn}
-            id="hr-login-btn"
-          >
-            HR Login
-          </button>
+        <div className="animate-fade-in-up stagger-3" style={styles.loginRow}>
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Company HR Teams</h2>
+            <p style={styles.hrSub}>
+              Login to review shortlisted candidates and hiring data.
+            </p>
+            <button
+              className="btn-primary"
+              onClick={() => router.push("/hr/login")}
+              style={styles.hrBtn}
+              id="hr-login-btn"
+            >
+              HR Login
+            </button>
+          </div>
+
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Admin Team</h2>
+            <p style={styles.hrSub}>
+              Login to access admin analytics and candidate controls.
+            </p>
+            <button
+              className="btn-primary"
+              onClick={() => router.push("/admin/login")}
+              style={styles.hrBtn}
+              id="admin-login-btn"
+            >
+              Admin Login
+            </button>
+          </div>
         </div>
 
 
@@ -237,6 +254,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "16px",
     padding: "28px 32px",
     textAlign: "center",
+    flex: 1,
+    minWidth: "280px",
+  },
+  loginRow: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "stretch",
+    flexWrap: "wrap",
   },
   hrTitle: {
     fontSize: "1.25rem",

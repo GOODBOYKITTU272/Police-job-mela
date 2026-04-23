@@ -2,9 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { validateCompanyLogin } from "@/lib/supabase";
+import { validateAdminLogin } from "@/lib/supabase";
 
-export default function HrLoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,14 +15,17 @@ export default function HrLoginPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
     setLoading(true);
     setError("");
 
-    const result = await validateCompanyLogin(email, password);
+    const result = await validateAdminLogin(normalizedEmail, normalizedPassword);
     if (!result.ok) {
-      if (result.reason === "no_visible_company_rows") {
+      if (result.reason === "admin_table_unreadable") {
         setError(
-          "Login table is not readable right now. Check Company_details table data or Supabase RLS select policy."
+          "Admin users table is not readable right now. Check admin_users table data or Supabase RLS select policy."
         );
       } else {
       setError("Invalid email or password");
@@ -31,9 +34,9 @@ export default function HrLoginPage() {
       return;
     }
 
-    sessionStorage.setItem("hr-authenticated", "true");
-    sessionStorage.setItem("hr-email", email.trim().toLowerCase());
-    router.push("/hr/candidates");
+    sessionStorage.setItem("admin-authenticated", "true");
+    sessionStorage.setItem("admin-email", normalizedEmail);
+    router.push("/admin");
   };
 
   return (
@@ -50,32 +53,32 @@ export default function HrLoginPage() {
           </button>
         </div>
 
-        <h1 style={styles.heading}>HR Login</h1>
+        <h1 style={styles.heading}>Admin Login</h1>
         <p style={styles.subheading}>
-          Enter your company account details to continue.
+          Enter admin credentials to access the dashboard.
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          <label htmlFor="hr-email" style={styles.label}>
+          <label htmlFor="admin-email" style={styles.label}>
             Email
           </label>
           <input
-            id="hr-email"
+            id="admin-email"
             type="email"
             className="input-field"
-            placeholder="you@company.com"
+            placeholder="admin@domain.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
             required
           />
 
-          <label htmlFor="hr-password" style={styles.label}>
+          <label htmlFor="admin-password" style={styles.label}>
             Password
           </label>
           <div style={styles.passwordWrap}>
             <input
-              id="hr-password"
+              id="admin-password"
               type={showPassword ? "text" : "password"}
               className="input-field"
               placeholder="Enter password"

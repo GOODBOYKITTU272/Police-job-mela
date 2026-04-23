@@ -5,9 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import {
   getCandidateById,
   computeIntelligence,
+  getCandidateRouting,
+  updateCandidateAllocationIntent,
   CandidateWithApplications,
   Application,
   IntelligenceSummary,
+  RoutingResult,
+  CandidateIntent,
 } from "@/lib/supabase";
 
 /* ── Status → Badge class ─────────────────────────────────── */
@@ -40,8 +44,10 @@ export default function CandidateDashboard() {
   const [candidates, setCandidates] = useState<CandidateWithApplications[] | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateWithApplications | null>(null);
   const [intel, setIntel] = useState<IntelligenceSummary | null>(null);
+  const [routing, setRouting] = useState<RoutingResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savingIntentFor, setSavingIntentFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cidParam) return;
@@ -53,17 +59,44 @@ export default function CandidateDashboard() {
       } else {
         setCandidates(data);
         if (data.length === 1) {
-          setSelectedCandidate(data[0]);
-          setIntel(computeIntelligence(data[0].applications));
+          const c = data[0];
+          setSelectedCandidate(c);
+          setIntel(computeIntelligence(c.applications));
+          
+          // Fetch real-time routing
+          const r = await getCandidateRouting(c);
+          setRouting(r);
         }
       }
       setLoading(false);
     })();
   }, [cidParam]);
 
-  const handleSelect = (c: CandidateWithApplications) => {
+  const handleSelect = async (c: CandidateWithApplications) => {
     setSelectedCandidate(c);
     setIntel(computeIntelligence(c.applications));
+    const r = await getCandidateRouting(c);
+    setRouting(r);
+  };
+
+  const handleIntentChange = async (companyName: string, intent: CandidateIntent) => {
+    if (!selectedCandidate || !routing) return;
+
+    setSavingIntentFor(companyName);
+    const previous = routing;
+
+    setRouting({
+      ...previous,
+      companies: previous.companies.map((company) =>
+        company.company_name === companyName ? { ...company, intent } : company
+      ),
+    });
+
+    const ok = await updateCandidateAllocationIntent(selectedCandidate.id, companyName, intent);
+    if (!ok) {
+      setRouting(previous);
+    }
+    setSavingIntentFor(null);
   };
 
   if (loading) {
@@ -87,7 +120,7 @@ export default function CandidateDashboard() {
             <span style={{ fontSize: "3rem" }}>🔍</span>
             <h2 style={{ marginBottom: 12 }}>{error || "No candidate found"}</h2>
             <p style={{ color: "#475569", marginBottom: 24, maxWidth: "400px", margin: "0 auto 24px auto", lineHeight: 1.6 }}>
-              Don't worry! You can try searching with your <strong>Mobile Number</strong>, <strong>Aadhar Number</strong>, or <strong>Candidate ID</strong> as alternatives.
+              Don&apos;t worry! You can try searching with your <strong>Mobile Number</strong>, <strong>Aadhar Number</strong>, or <strong>Candidate ID</strong> as alternatives.
             </p>
             <button className="btn-primary" onClick={() => router.push("/")}>
               ← Back to Home
@@ -168,20 +201,75 @@ export default function CandidateDashboard() {
           </div>
         </header>
 
-        {/* Motivation Card */}
-        <div className="animate-fade-in-up" style={S.motivationCard}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: "1.8rem" }}>🚀</span>
-            <div>
-              <p style={{ fontSize: "1.05rem", fontWeight: 700, color: "#2dd4a8", margin: 0 }}>
-                Great job showing up today!
-              </p>
-              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4, margin: 0 }}>
-                You are already ahead of the curve. Keep moving forward with confidence!
-              </p>
-            </div>
+        {/* Sector Assignment Banner */}
+        {routing && (
+          <div className="animate-fade-in-up" style={S.sectorBanner}>
+            <div style={S.sectorLabel}>YOUR ASSIGNED SECTOR</div>
+            <div style={S.sectorValue}>{routing.assigned_sector}</div>
+            <p style={S.sectorDesc}>Please proceed to the designated hall for this sector. Your matches are listed below.</p>
           </div>
-        </div>
+        )}
+
+        {/* Company List (Live Distribution) */}
+        {routing && routing.companies.length > 0 && (
+          <div className="animate-fade-in-up glass-card" style={S.routingCard}>
+            <h3 style={S.profileTitle}>🏢 Recommended Companies (High Vacancy)</h3>
+            <div style={S.tableContainer}>
+              <table style={S.table}>
+                <thead>
+                  <tr style={S.tableHeader}>
+                    <th style={S.th}>Company Name</th>
+                    <th style={S.th}>Status</th>
+                    <th style={S.th}>Intent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {routing.companies.map((company, idx) => {
+                    let status = "Eligible";
+                    let statusColor = "#475569";
+                    if (idx === 0) {
+                      status = "Priority Company";
+                      statusColor = "#E31E24";
+                    } else if (idx < 3) {
+                      status = "Recommended";
+                      statusColor = "#001A3D";
+                    }
+
+                    return (
+                      <tr key={company.company_name} style={S.tableRow}>
+                        <td style={S.td}><strong>{company.company_name}</strong></td>
+                        <td style={S.td}>
+                          <span style={{ ...S.statusBadge, backgroundColor: statusColor }}>
+                            {status}
+                          </span>
+                        </td>
+                        <td style={S.td}>
+                          <select
+                            className="input-field"
+                            value={company.intent || "Pending"}
+                            onChange={(event) =>
+                              handleIntentChange(
+                                company.company_name,
+                                event.target.value as CandidateIntent
+                              )
+                            }
+                            disabled={savingIntentFor === company.company_name}
+                            style={S.intentSelect}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Not Interested">Not Interested</option>
+                            <option value="Will Attend">Will Attend</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p style={S.routingNote}>Showing top 5 companies with available spots in your sector.</p>
+          </div>
+        )}
 
         {/* Detailed Profile Card */}
         <div className="glass-card animate-fade-in-up" style={S.profileCard}>
@@ -209,6 +297,14 @@ export default function CandidateDashboard() {
             </div>
           )}
         </div>
+
+        {/* Local Footer */}
+        <footer style={S.footer}>
+          <div style={S.poweredBy}>
+            <span style={S.poweredText}>POWERED BY</span>
+            <img src="/applywizz_logo.png" alt="ApplyWizz" style={S.poweredLogo} />
+          </div>
+        </footer>
 
       </div>
     </div>
@@ -322,13 +418,35 @@ const S: Record<string, React.CSSProperties> = {
   profileCard: { padding: "24px", marginTop: 4 },
   profileTitle: { fontSize: "1.1rem", fontWeight: 700, marginBottom: 20, color: "#E31E24" },
   profileGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" },
-  motivationCard: {
-    padding: "20px 24px",
-    background: "linear-gradient(135deg, rgba(0,26,61,0.03), rgba(227,30,36,0.02))",
-    border: "1px solid rgba(0,26,61,0.08)",
+  sectorBanner: {
+    padding: "24px",
+    background: "linear-gradient(135deg, #001A3D, #002b66)",
     borderRadius: "16px",
-    marginTop: 4,
+    color: "#ffffff",
+    textAlign: "center" as const,
+    boxShadow: "0 10px 30px rgba(0,26,61,0.15)",
   },
+  sectorLabel: { fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.15em", color: "#fbbf24", marginBottom: 8 },
+  sectorValue: { fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.02em" },
+  sectorDesc: { fontSize: "0.85rem", opacity: 0.8, marginTop: 12 },
+  
+  routingCard: { padding: "24px", marginTop: 4 },
+  tableContainer: { overflowX: "auto" as const, marginTop: 16 },
+  table: { width: "100%", borderCollapse: "collapse" as const },
+  tableHeader: { borderBottom: "2px solid rgba(0,26,61,0.1)" },
+  th: { textAlign: "left" as const, padding: "12px", fontSize: "0.75rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase" as const },
+  tableRow: { borderBottom: "1px solid rgba(0,26,61,0.05)" },
+  td: { padding: "16px 12px", fontSize: "0.95rem", color: "#001A3D" },
+  statusBadge: { padding: "4px 10px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 800, color: "#ffffff", textTransform: "uppercase" as const },
+  intentSelect: {
+    maxWidth: "170px",
+    minWidth: "150px",
+    padding: "8px 10px",
+    fontSize: "0.85rem",
+    borderRadius: "8px",
+  },
+  routingNote: { fontSize: "0.75rem", color: "#64748b", marginTop: 16, fontStyle: "italic" as const },
+  
   priorityCard: { padding: "16px 20px" },
   section: { marginTop: 8 },
   appList: { display: "flex", flexDirection: "column", gap: 12 },
@@ -343,4 +461,26 @@ const S: Record<string, React.CSSProperties> = {
   nextStep: { display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(0, 26, 61, 0.04)", borderRadius: 8, marginBottom: 8 },
   nextStepIcon: { color: "#001A3D", fontWeight: 700 },
   nextStepText: { fontSize: "0.85rem", color: "#475569" },
+  footer: {
+    marginTop: "32px",
+    paddingTop: "20px",
+    borderTop: "1px solid rgba(0,26,61,0.06)",
+    textAlign: "center",
+  },
+  poweredBy: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+  },
+  poweredText: {
+    fontSize: "0.65rem",
+    fontWeight: 800,
+    color: "#475569",
+    letterSpacing: "0.1em",
+  },
+  poweredLogo: {
+    height: "32px",
+    width: "auto",
+  },
 };
