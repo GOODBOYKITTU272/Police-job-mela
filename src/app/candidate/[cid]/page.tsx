@@ -198,6 +198,7 @@ export default function CandidateDashboard() {
             <ProfileItem label="Languages" value={selectedCandidate.languages} />
             <ProfileItem label="Driving License" value={selectedCandidate.driving_license} />
             <ProfileItem label="Experience" value={selectedCandidate.experience} />
+            <ProfileItem label="Field of Work" value={selectedCandidate.field_of_work} />
             <ProfileItem label="Preferred Location" value={selectedCandidate.preferred_location} />
             <ProfileItem label="Preferred Sector" value={selectedCandidate.preferred_sector} />
           </div>
