@@ -90,18 +90,16 @@ export interface Job {
 export async function getCandidateById(input: string): Promise<CandidateWithApplications[] | null> {
   const query = input.trim();
   
-  let candidates: Candidate[] = [];
-
-  // 1. Try exact match on ID, Phone, Email, or Aadhar
-  const { data: exactMatch } = await supabase
+  // 1. Try match on ID, Phone, Email, or Aadhar (Case-Insensitive)
+  const { data: matches } = await supabase
     .from('candidates')
     .select('*')
-    .or(`id.eq.${query},phone.eq.${query},email.eq.${query},aadhar_number.eq.${query}`);
+    .or(`id.ilike.${query},phone.ilike.${query},email.ilike.${query},aadhar_number.ilike.${query}`);
 
-  if (exactMatch && exactMatch.length > 0) {
-    candidates = exactMatch;
+  if (matches && matches.length > 0) {
+    candidates = matches;
   } else {
-    // 2. If no exact match, try partial match on phone, email, or aadhar
+    // 2. If no direct match, try partial match
     const { data: partialMatch } = await supabase
       .from('candidates')
       .select('*')

@@ -49,7 +49,7 @@ export default function CandidateDashboard() {
       setLoading(true);
       const data = await getCandidateById(cidParam);
       if (!data || data.length === 0) {
-        setError(`No candidate found for "${cidParam}".`);
+        setError(`No candidate found for "${cidParam}". You can try searching with your Aadhar Number, Mobile Number, or Candidate ID as alternatives.`);
       } else {
         setCandidates(data);
         if (data.length === 1) {
