@@ -185,33 +185,16 @@ export default function CandidateDashboard() {
           )}
         </div>
 
-        {/* Priority Suggestion */}
-        <div className="alert-card info animate-fade-in-up" style={S.priorityCard}>
-          <span style={{ fontSize: "1.3rem" }}>🎯</span>
-          <div>
-            <strong style={{ display: "block", marginBottom: 2 }}>Priority Suggestion</strong>
-            <span style={{ color: "#94a3b8", fontSize: "0.95rem" }}>{intel.prioritySuggestion}</span>
-          </div>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid-4 animate-fade-in-up">
-          <StatCard label="Total Applied" value={intel.totalApplied} color="teal" icon="📋" />
-          <StatCard label="Active" value={intel.activeProcesses} color="blue" icon="⚡" />
-          <StatCard label="Interviews" value={intel.interviewsScheduled} color="purple" icon="📅" />
-          <StatCard label="Rejections" value={intel.rejections} color="red" icon="✕" />
-        </div>
-
         {/* Applications List */}
         <section style={S.section}>
-          <h2 className="section-title">All Applications</h2>
+          <h2 className="section-title">Job Applications</h2>
           <div style={S.appList}>
             {selectedCandidate.applications.map((app, i) => (
               <ApplicationCard key={app.id} app={app} index={i} />
             ))}
             {selectedCandidate.applications.length === 0 && (
-              <div className="glass-card" style={{ padding: 30, textAlign: "center", color: "#64748b" }}>
-                No job applications found yet.
+              <div className="glass-card" style={{ padding: "30px", textAlign: "center", color: "#64748b", border: "1px dashed rgba(255,255,255,0.1)" }}>
+                No active job applications found.
               </div>
             )}
           </div>
