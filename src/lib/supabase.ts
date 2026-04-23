@@ -37,7 +37,22 @@ export interface Candidate {
   aadhar_number?: string | null;
   remarks?: string | null;
   preferred_sector?: string | null;
+  assigned_sector?: string | null;
+  viewed_at?: string | null;
   created_at: string;
+}
+
+export interface CompanyAllocation {
+  company_name: string;
+  sector: string;
+  vacancy: number;
+  assigned_count: number;
+  remaining: number;
+}
+
+export interface RoutingResult {
+  assigned_sector: string;
+  companies: CompanyAllocation[];
 }
 
 export interface Application {
@@ -417,4 +432,74 @@ export function computeIntelligence(applications: Application[]): IntelligenceSu
     successPredictions,
     prioritySuggestion,
   };
+}
+
+// ── Routing Engine ──────────────────────────────────────────
+
+export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
+  const education = (candidate.education_qualification || '').toUpperCase();
+  const preference = (candidate.preferred_sector || '').toLowerCase();
+  
+  let assigned_sector = 'Hospitality & Support'; // Default
+
+  // STEP 1: Assign Sector
+  if (education.includes('SSC') || education.includes('10TH')) {
+    assigned_sector = 'Manufacturing / Logistics';
+  } else if (education.includes('B.TECH') || education.includes('BTECH') || education.includes('ENGINEERING')) {
+    assigned_sector = 'IT / Software';
+  } else if (education.includes('DEGREE') || education.includes('GRADUATE')) {
+    if (preference.includes('it') || preference.includes('software')) {
+      assigned_sector = 'IT / Software';
+    } else if (preference.includes('pharma') || preference.includes('healthcare') || preference.includes('medical')) {
+      assigned_sector = 'Healthcare';
+    } else {
+      assigned_sector = 'Manufacturing / Logistics';
+    }
+  } else if (preference.includes('it')) {
+    assigned_sector = 'IT / Software';
+  } else if (preference.includes('manufacturing')) {
+    assigned_sector = 'Manufacturing / Logistics';
+  }
+
+  // STEP 2: Fetch Companies with Load Balancing (remaining = vacancy - assigned_count)
+  const { data: companies, error } = await supabase
+    .from('company_allocation')
+    .select('*')
+    .eq('sector', assigned_sector)
+    .gt('vacancy', 0);
+
+  if (error || !companies) {
+    return { assigned_sector, companies: [] };
+  }
+
+  // Calculate remaining and sort by capacity
+  const processedCompanies: CompanyAllocation[] = companies
+    .map(c => ({
+      ...c,
+      remaining: c.vacancy - c.assigned_count
+    }))
+    .sort((a, b) => b.remaining - a.remaining)
+    .slice(0, 5); // Limit to top 5
+
+  // STEP 3: Update tracking (Async)
+  if (processedCompanies.length > 0) {
+    const topCompany = processedCompanies[0].company_name;
+    
+    // Increment assigned_count for the top company
+    supabase.from('company_allocation')
+      .update({ assigned_count: (processedCompanies[0].assigned_count + 1) })
+      .eq('company_name', topCompany)
+      .then();
+    
+    // Track on candidate record
+    supabase.from('candidates')
+      .update({ 
+        assigned_sector, 
+        viewed_at: new Date().toISOString() 
+      })
+      .eq('id', candidate.id)
+      .then();
+  }
+
+  return { assigned_sector, companies: processedCompanies };
 }

@@ -80,6 +80,10 @@ export default function Home() {
           <p style={styles.footerText}>
             Siddipet POLICE UDYOGA MITRA — v2.0 (23/04/2026)
           </p>
+          <div style={styles.poweredBy}>
+            <span style={styles.poweredText}>POWERED BY</span>
+            <img src="/applywizz_logo.jpg" alt="ApplyWizz" style={styles.poweredLogo} />
+          </div>
         </footer>
       </main>
     </div>
@@ -180,6 +184,28 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headingAccent: {
     color: "#E31E24",
+  },
+  footerText: {
+    fontSize: "0.8rem",
+    color: "#64748b",
+    fontWeight: 500,
+  },
+  poweredBy: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    marginTop: "16px",
+  },
+  poweredText: {
+    fontSize: "0.65rem",
+    fontWeight: 800,
+    color: "#475569",
+    letterSpacing: "0.1em",
+  },
+  poweredLogo: {
+    height: "32px",
+    width: "auto",
   },
   subheading: {
     fontSize: "1.1rem",
