@@ -216,11 +216,11 @@ export default function CandidateDashboard() {
 }
 
 function ProfileItem({ label, value }: { label: string; value: string | number | null | undefined }) {
-  if (value === null || value === undefined || value === "") return null;
+  const displayValue = (value === null || value === undefined || value === "") ? "—" : value;
   return (
     <div style={S.appDetail}>
       <span style={S.detailLabel}>{label}</span>
-      <span style={S.detailValue}>{value}</span>
+      <span style={S.detailValue}>{displayValue}</span>
     </div>
   );
 }
