@@ -196,7 +196,6 @@ export default function CandidateDashboard() {
                 <thead>
                   <tr style={S.tableHeader}>
                     <th style={S.th}>Company Name</th>
-                    <th style={S.th}>Vacancies</th>
                     <th style={S.th}>Status</th>
                   </tr>
                 </thead>
@@ -215,7 +214,6 @@ export default function CandidateDashboard() {
                     return (
                       <tr key={company.company_name} style={S.tableRow}>
                         <td style={S.td}><strong>{company.company_name}</strong></td>
-                        <td style={S.td}>{company.vacancy}</td>
                         <td style={S.td}>
                           <span style={{ ...S.statusBadge, backgroundColor: statusColor }}>
                             {status}
