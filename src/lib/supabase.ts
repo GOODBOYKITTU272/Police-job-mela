@@ -463,7 +463,7 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
 
   // STEP 2: Fetch Companies with Load Balancing (remaining = vacancy - assigned_count)
   const { data: companies, error } = await supabase
-    .from('company_allocation')
+    .from('Company_details')
     .select('*')
     .eq('sector', assigned_sector)
     .gt('vacancy', 0);
@@ -476,7 +476,8 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
   const processedCompanies: CompanyAllocation[] = companies
     .map(c => ({
       ...c,
-      remaining: c.vacancy - c.assigned_count
+      assigned_count: c.assigned_count || 0, // Safety fallback
+      remaining: c.vacancy - (c.assigned_count || 0)
     }))
     .sort((a, b) => b.remaining - a.remaining)
     .slice(0, 5); // Limit to top 5
@@ -485,11 +486,13 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
   if (processedCompanies.length > 0) {
     const topCompany = processedCompanies[0].company_name;
     
-    // Increment assigned_count for the top company
-    supabase.from('company_allocation')
-      .update({ assigned_count: (processedCompanies[0].assigned_count + 1) })
-      .eq('company_name', topCompany)
-      .then();
+    // Increment assigned_count for the top company (only if column exists)
+    if ('assigned_count' in processedCompanies[0]) {
+      supabase.from('Company_details')
+        .update({ assigned_count: (processedCompanies[0].assigned_count + 1) })
+        .eq('company_name', topCompany)
+        .then();
+    }
     
     // Track on candidate record
     supabase.from('candidates')

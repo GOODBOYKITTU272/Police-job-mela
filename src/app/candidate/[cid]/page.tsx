@@ -5,9 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import {
   getCandidateById,
   computeIntelligence,
+  getCandidateRouting,
   CandidateWithApplications,
   Application,
   IntelligenceSummary,
+  RoutingResult,
 } from "@/lib/supabase";
 
 /* ── Status → Badge class ─────────────────────────────────── */
