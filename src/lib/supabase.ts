@@ -499,11 +499,32 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
   }
 
   const processedCompanies = companies
-    .map(c => ({
-      ...c,
-      remaining: c.vacancy - (c.assigned_count || 0)
-    }))
-    .sort((a, b) => b.remaining - a.remaining)
+    .map(c => {
+      // Calculate Education Alignment Score
+      let eduScore = 0;
+      const compEdu = (c.education || '').toUpperCase();
+      const candEdu = education; // Candidate's education from line 466
+
+      if (candEdu === compEdu) {
+        eduScore = 100; // Perfect match
+      } else if (candEdu.includes('B.TECH') && (compEdu.includes('DEGREE') || compEdu.includes('ANY'))) {
+        eduScore = 50; // Over-qualified
+      } else if (candEdu.includes('DEGREE') && compEdu.includes('SSC')) {
+        eduScore = 50; // Over-qualified
+      }
+
+      return {
+        ...c,
+        eduScore,
+        remaining: c.vacancy - (c.assigned_count || 0)
+      };
+    })
+    .sort((a, b) => {
+      // Primary sort: Education Alignment
+      if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
+      // Secondary sort: Remaining Vacancy
+      return b.remaining - a.remaining;
+    })
     .slice(0, 5);
 
   // 3. PERSIST THE ALLOCATION (Log it permanently)
