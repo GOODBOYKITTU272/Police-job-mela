@@ -437,12 +437,38 @@ export function computeIntelligence(applications: Application[]): IntelligenceSu
 // ── Routing Engine ──────────────────────────────────────────
 
 export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
+  // 1. Check if the candidate already has an allocation in the permanent log
+  const { data: existingAllocations, error: allocError } = await supabase
+    .from('candidate_allocations')
+    .select('company_name, sector')
+    .eq('candidate_id', candidate.id);
+
+  if (existingAllocations && existingAllocations.length > 0) {
+    // If they already have an assignment, fetch the full details for those companies
+    const companyNames = existingAllocations.map(a => a.company_name);
+    const { data: companyDetails } = await supabase
+      .from('Company_details')
+      .select('*')
+      .in('company_name', companyNames);
+
+    if (companyDetails && companyDetails.length > 0) {
+      return {
+        assigned_sector: existingAllocations[0].sector,
+        companies: companyDetails.map(c => ({
+          ...c,
+          remaining: c.vacancy - (c.assigned_count || 0)
+        }))
+      };
+    }
+  }
+
+  // 2. No existing allocation, run the routing logic
   const education = (candidate.education_qualification || '').toUpperCase();
   const preference = (candidate.preferred_sector || '').toLowerCase();
   
   let assigned_sector = 'Hospitality & Support'; // Default
 
-  // STEP 1: Assign Sector
+  // Sector Assignment Logic
   if (education.includes('SSC') || education.includes('10TH')) {
     assigned_sector = 'Manufacturing / Logistics';
   } else if (education.includes('B.TECH') || education.includes('BTECH') || education.includes('ENGINEERING')) {
@@ -461,7 +487,7 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
     assigned_sector = 'Manufacturing / Logistics';
   }
 
-  // STEP 2: Fetch Companies with Load Balancing (remaining = vacancy - assigned_count)
+  // Fetch best available companies
   const { data: companies, error } = await supabase
     .from('Company_details')
     .select('*')
@@ -472,36 +498,35 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
     return { assigned_sector, companies: [] };
   }
 
-  // Calculate remaining and sort by capacity
-  const processedCompanies: CompanyAllocation[] = companies
+  const processedCompanies = companies
     .map(c => ({
       ...c,
-      assigned_count: c.assigned_count || 0, // Safety fallback
       remaining: c.vacancy - (c.assigned_count || 0)
     }))
     .sort((a, b) => b.remaining - a.remaining)
-    .slice(0, 5); // Limit to top 5
+    .slice(0, 5);
 
-  // STEP 3: Update tracking (Async)
+  // 3. PERSIST THE ALLOCATION (Log it permanently)
   if (processedCompanies.length > 0) {
-    const topCompany = processedCompanies[0].company_name;
+    const allocationsToInsert = processedCompanies.map(c => ({
+      candidate_id: candidate.id,
+      company_name: c.company_name,
+      sector: assigned_sector
+    }));
+
+    // Log the companies shown to the candidate
+    await supabase.from('candidate_allocations').insert(allocationsToInsert);
+
+    // Increment assigned_count for the primary (top) company
+    const topCompany = processedCompanies[0];
+    await supabase.from('Company_details')
+      .update({ assigned_count: (topCompany.assigned_count || 0) + 1 })
+      .eq('company_name', topCompany.company_name);
     
-    // Increment assigned_count for the top company (only if column exists)
-    if ('assigned_count' in processedCompanies[0]) {
-      supabase.from('Company_details')
-        .update({ assigned_count: (processedCompanies[0].assigned_count + 1) })
-        .eq('company_name', topCompany)
-        .then();
-    }
-    
-    // Track on candidate record
-    supabase.from('candidates')
-      .update({ 
-        assigned_sector, 
-        viewed_at: new Date().toISOString() 
-      })
-      .eq('id', candidate.id)
-      .then();
+    // Update candidate tracking record
+    await supabase.from('candidates')
+      .update({ assigned_sector, viewed_at: new Date().toISOString() })
+      .eq('id', candidate.id);
   }
 
   return { assigned_sector, companies: processedCompanies };
