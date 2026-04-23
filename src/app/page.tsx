@@ -48,13 +48,13 @@ export default function Home() {
         >
           <h2 style={styles.cardTitle}>🔍 Candidate Status Lookup</h2>
           <p style={styles.cardSub}>
-            Enter your <strong>WhatsApp Mobile Number</strong> or Candidate ID to view your dashboard
+            Enter your <strong>Aadhar Number</strong>, Mobile, or Email to view your dashboard
           </p>
           <div style={styles.inputRow}>
             <input
               type="text"
               className="input-field input-large"
-              placeholder="e.g. 9876543210"
+              placeholder="Aadhar / Mobile / Email"
               value={cid}
               onChange={(e) => setCid(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
