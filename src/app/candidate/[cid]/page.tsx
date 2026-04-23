@@ -57,7 +57,6 @@ export default function CandidateDashboard() {
     })();
   }, [cidParam]);
 
-  /* ── Loading ────────────────────────────────────────────── */
   if (loading) {
     return (
       <div style={S.page}>
@@ -71,7 +70,6 @@ export default function CandidateDashboard() {
     );
   }
 
-  /* ── Not Found ──────────────────────────────────────────── */
   if (error || !candidate || !intel) {
     return (
       <div style={S.page}>
@@ -91,12 +89,11 @@ export default function CandidateDashboard() {
     );
   }
 
-  /* ── Dashboard ──────────────────────────────────────────── */
   return (
     <div style={S.page}>
       <div style={S.container}>
         {/* Header */}
-        <header style={S.header} className="animate-fade-in-up">
+        <header style={S.header}>
           <button className="btn-ghost" onClick={() => router.push("/")} style={S.backBtn}>
             ← Home
           </button>
@@ -115,8 +112,34 @@ export default function CandidateDashboard() {
           </div>
         </header>
 
+        {/* Detailed Profile Card */}
+        <div className="glass-card animate-fade-in-up" style={S.profileCard}>
+          <h3 style={S.profileTitle}>📋 Detailed Profile</h3>
+          <div style={S.profileGrid}>
+            <ProfileItem label="Father's Name" value={candidate.father_name} />
+            <ProfileItem label="Gender / Age" value={`${candidate.gender || '-'} / ${candidate.age || '-'}`} />
+            <ProfileItem label="Aadhar Number" value={candidate.aadhar_number} />
+            <ProfileItem label="PS Jurisdiction" value={candidate.ps_jurisdiction} />
+            <ProfileItem label="Education" value={candidate.education_qualification} />
+            <ProfileItem label="Village" value={candidate.village} />
+            <ProfileItem label="Mandal" value={candidate.mandal} />
+            <ProfileItem label="District" value={candidate.district} />
+            <ProfileItem label="Languages" value={candidate.languages} />
+            <ProfileItem label="Driving License" value={candidate.driving_license} />
+            <ProfileItem label="Experience" value={candidate.experience} />
+            <ProfileItem label="Preferred Location" value={candidate.preferred_location} />
+            <ProfileItem label="Preferred Sector" value={candidate.preferred_sector} />
+          </div>
+          {candidate.remarks && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              <span style={S.detailLabel}>Remarks</span>
+              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4 }}>{candidate.remarks}</p>
+            </div>
+          )}
+        </div>
+
         {/* Priority Suggestion */}
-        <div className="alert-card info animate-fade-in-up stagger-1" style={S.priorityCard}>
+        <div className="alert-card info animate-fade-in-up" style={S.priorityCard}>
           <span style={{ fontSize: "1.3rem" }}>🎯</span>
           <div>
             <strong style={{ display: "block", marginBottom: 2 }}>Priority Suggestion</strong>
@@ -125,34 +148,12 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid-4 animate-fade-in-up stagger-2">
+        <div className="grid-4 animate-fade-in-up">
           <StatCard label="Total Applied" value={intel.totalApplied} color="teal" icon="📋" />
           <StatCard label="Active" value={intel.activeProcesses} color="blue" icon="⚡" />
           <StatCard label="Interviews" value={intel.interviewsScheduled} color="purple" icon="📅" />
           <StatCard label="Rejections" value={intel.rejections} color="red" icon="✕" />
         </div>
-
-        {/* Interview Conflicts */}
-        {intel.interviewConflicts.length > 0 && (
-          <div className="alert-card warning animate-fade-in-up stagger-3" style={{ marginTop: 4 }}>
-            <span style={{ fontSize: "1.3rem" }}>⚠️</span>
-            <div>
-              <strong>Interview Conflict Detected!</strong>
-              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4 }}>
-                You have multiple interviews scheduled on the same day:
-              </p>
-              {intel.interviewConflicts.map((group, gi) => (
-                <div key={gi} style={{ marginTop: 8 }}>
-                  {group.map((a) => (
-                    <div key={a.id} style={{ fontSize: "0.85rem" }}>
-                      • {a.company_name} — {a.role} ({new Date(a.interview_date!).toLocaleDateString()})
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Applications List */}
         <section style={S.section}>
@@ -163,42 +164,21 @@ export default function CandidateDashboard() {
             ))}
           </div>
         </section>
-
-        {/* Success Predictions */}
-        {intel.successPredictions.length > 0 && (
-          <section style={S.section}>
-            <h2 className="section-title">Success Predictions</h2>
-            <div className="glass-card" style={S.predictCard}>
-              {intel.successPredictions.slice(0, 5).map(({ application, probability }) => (
-                <div key={application.id} style={S.predictRow}>
-                  <div style={S.predictInfo}>
-                    <strong>{application.role}</strong>
-                    <span style={S.predictCompany}>{application.company_name}</span>
-                  </div>
-                  <div style={S.predictRight}>
-                    <div className="match-meter">
-                      <div className="match-bar" style={{ width: 120 }}>
-                        <div
-                          className={`match-fill ${matchLevel(probability)}`}
-                          style={{ width: `${probability}%` }}
-                        />
-                      </div>
-                      <span className="match-value" style={{ color: probability >= 50 ? "#2dd4a8" : probability >= 30 ? "#f59e0b" : "#ef4444" }}>
-                        {probability}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   );
 }
 
-/* ── Stat Card Component ──────────────────────────────────── */
+function ProfileItem({ label, value }: { label: string; value: string | number | null | undefined }) {
+  if (value === null || value === undefined || value === "") return null;
+  return (
+    <div style={S.appDetail}>
+      <span style={S.detailLabel}>{label}</span>
+      <span style={S.detailValue}>{value}</span>
+    </div>
+  );
+}
+
 function StatCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
   return (
     <div className={`stat-card ${color}`}>
@@ -213,15 +193,10 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
   );
 }
 
-/* ── Application Card Component ───────────────────────────── */
 function ApplicationCard({ app, index }: { app: Application; index: number }) {
   const level = matchLevel(app.match_percent);
-
   return (
-    <div
-      className="glass-card animate-fade-in-up"
-      style={{ ...S.appCard, animationDelay: `${index * 0.06}s` }}
-    >
+    <div className="glass-card animate-fade-in-up" style={{ ...S.appCard, animationDelay: `${index * 0.06}s` }}>
       <div style={S.appHeader}>
         <div>
           <h3 style={S.appRole}>{app.role}</h3>
@@ -229,7 +204,6 @@ function ApplicationCard({ app, index }: { app: Application; index: number }) {
         </div>
         <span className={badgeClass(app.status)}>{app.status}</span>
       </div>
-
       <div style={S.appDetails}>
         <div style={S.appDetail}>
           <span style={S.detailLabel}>Category</span>
@@ -241,75 +215,40 @@ function ApplicationCard({ app, index }: { app: Application; index: number }) {
             <div className="match-bar" style={{ width: 80 }}>
               <div className={`match-fill ${level}`} style={{ width: `${app.match_percent}%` }} />
             </div>
-            <span className="match-value" style={{ color: level === "high" ? "#2dd4a8" : level === "medium" ? "#f59e0b" : "#ef4444" }}>
-              {app.match_percent}%
-            </span>
+            <span className="match-value">{app.match_percent}%</span>
           </div>
         </div>
         <div style={S.appDetail}>
           <span style={S.detailLabel}>Success</span>
-          <span style={{ ...S.detailValue, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-            {app.success_probability}%
-          </span>
+          <span style={S.detailValue}>{app.success_probability}%</span>
         </div>
-        {app.interview_date && (
-          <div style={S.appDetail}>
-            <span style={S.detailLabel}>Interview</span>
-            <span style={S.detailValue}>
-              📅 {new Date(app.interview_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-            </span>
-          </div>
-        )}
       </div>
-
-      {app.next_step && (
-        <div style={S.nextStep}>
-          <span style={S.nextStepIcon}>→</span>
-          <span style={S.nextStepText}>{app.next_step}</span>
-        </div>
-      )}
-
-      {app.reason && (
-        <p style={S.reason}>{app.reason}</p>
-      )}
     </div>
   );
 }
 
-/* ── Styles ────────────────────────────────────────────────── */
 const S: Record<string, React.CSSProperties> = {
   page: { minHeight: "100vh", padding: "32px 16px" },
   container: { maxWidth: 860, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 },
-
   loadingWrap: { textAlign: "center", padding: "120px 0" },
   loadingPulse: { fontSize: "3rem", color: "#2dd4a8", animation: "pulse 1.5s infinite" },
   loadingText: { color: "#94a3b8", marginTop: 16 },
-
   errorCard: { textAlign: "center", padding: "80px 0" },
-
   header: { display: "flex", flexDirection: "column", gap: 16 },
   backBtn: { alignSelf: "flex-start" },
   headerInfo: { display: "flex", alignItems: "center", gap: 16 },
-  avatar: {
-    width: 56, height: 56, borderRadius: "50%",
-    background: "linear-gradient(135deg, #2dd4a8, #4f8cff)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: "1.5rem", fontWeight: 800, color: "#06080f",
-  },
+  avatar: { width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #2dd4a8, #4f8cff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", fontWeight: 800, color: "#06080f" },
   name: { fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em" },
   cidRow: { display: "flex", alignItems: "center", gap: 12, marginTop: 4, flexWrap: "wrap" },
-  cidBadge: {
-    padding: "2px 10px", background: "rgba(45,212,168,0.1)", border: "1px solid rgba(45,212,168,0.25)",
-    borderRadius: 9999, fontSize: "0.75rem", fontWeight: 700, color: "#2dd4a8",
-    fontFamily: "'JetBrains Mono', monospace",
-  },
+  cidBadge: { padding: "2px 10px", background: "rgba(45,212,168,0.1)", border: "1px solid rgba(45,212,168,0.25)", borderRadius: 9999, fontSize: "0.75rem", fontWeight: 700, color: "#2dd4a8", fontFamily: "'JetBrains Mono', monospace" },
   email: { fontSize: "0.85rem", color: "#64748b" },
-
+  profileCard: { padding: "24px", marginTop: 4 },
+  profileTitle: { fontSize: "1.1rem", fontWeight: 700, marginBottom: 20, color: "#2dd4a8" },
+  profileGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" },
   priorityCard: { padding: "16px 20px" },
-
   section: { marginTop: 8 },
   appList: { display: "flex", flexDirection: "column", gap: 12 },
-  appCard: { padding: "20px 24px", opacity: 0 },
+  appCard: { padding: "20px 24px", opacity: 1 },
   appHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 16 },
   appRole: { fontSize: "1.05rem", fontWeight: 700, marginBottom: 2 },
   appCompany: { fontSize: "0.9rem", color: "#94a3b8" },
@@ -317,19 +256,7 @@ const S: Record<string, React.CSSProperties> = {
   appDetail: { display: "flex", flexDirection: "column", gap: 4 },
   detailLabel: { fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 },
   detailValue: { fontSize: "0.9rem", color: "#f1f5f9" },
-
-  nextStep: {
-    display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
-    background: "rgba(79, 140, 255, 0.06)", borderRadius: 8, marginBottom: 8,
-  },
+  nextStep: { display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(79, 140, 255, 0.06)", borderRadius: 8, marginBottom: 8 },
   nextStepIcon: { color: "#4f8cff", fontWeight: 700 },
   nextStepText: { fontSize: "0.85rem", color: "#94a3b8" },
-
-  reason: { fontSize: "0.82rem", color: "#64748b", fontStyle: "italic", lineHeight: 1.5, marginTop: 4 },
-
-  predictCard: { padding: "8px 0" },
-  predictRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" },
-  predictInfo: { display: "flex", flexDirection: "column" },
-  predictCompany: { fontSize: "0.82rem", color: "#64748b" },
-  predictRight: { display: "flex", alignItems: "center" },
 };

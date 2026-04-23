@@ -21,6 +21,22 @@ export interface Candidate {
   name: string;
   email: string;
   phone: string | null;
+  ps_jurisdiction?: string | null;
+  gender?: string | null;
+  father_name?: string | null;
+  age?: string | null;
+  village?: string | null;
+  mandal?: string | null;
+  district?: string | null;
+  education_qualification?: string | null;
+  preferred_location?: string | null;
+  languages?: string | null;
+  driving_license?: string | null;
+  experience?: string | null;
+  field_of_work?: string | null;
+  aadhar_number?: string | null;
+  remarks?: string | null;
+  preferred_sector?: string | null;
   created_at: string;
 }
 
