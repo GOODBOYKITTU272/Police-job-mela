@@ -160,11 +160,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: "block",
   },
   main: {
-    maxWidth: "640px",
+    maxWidth: "860px",
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: "28px",
+    gap: "20px",
     position: "relative",
     zIndex: 1,
   },
