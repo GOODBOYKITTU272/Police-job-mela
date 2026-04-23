@@ -108,17 +108,16 @@ export default function Home() {
         {/* Hero */}
         <div className="animate-fade-in-up" style={styles.hero}>
           <div style={styles.brandBadge}>
-            <span style={styles.brandIcon}>◆</span>
-            RecruitIQ
+            <span style={styles.brandIcon}>🚔</span>
+            Siddipet Police
           </div>
           <h1 style={styles.heading}>
-            Candidate <span style={styles.headingAccent}>Intelligence</span>
+            Udyogh <span style={styles.headingAccent}>Mitra</span>
             <br />
-            Dashboard
+            Job Portal
           </h1>
           <p style={styles.subheading}>
-            Track every application. Merge multiple pipelines. Get real-time
-            status intelligence across all your job applications.
+            Official Recruitment Portal launched on 23/04/2026. Track every application and get real-time status intelligence.
           </p>
         </div>
 
@@ -274,7 +273,7 @@ export default function Home() {
         {/* Footer */}
         <footer style={styles.footer}>
           <p style={styles.footerText}>
-            RecruitIQ — Candidate Intelligence System v2.0
+            Siddipet Police Udyogh Mitra — v2.0 (23/04/2026)
           </p>
         </footer>
       </main>

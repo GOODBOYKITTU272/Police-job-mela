@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RecruitIQ — Candidate Intelligence Dashboard",
+  title: "Siddipet Police Udyogh Mitra — Job Portal",
   description:
-    "Real-time recruitment intelligence system. Track candidate applications, pipeline status, and smart matching across multiple jobs.",
+    "Official Job Mela portal for Siddipet Police. Track applications, pipeline status, and smart matching across multiple job opportunities launched on 23/04/2026.",
 };
 
 export default function RootLayout({

@@ -47,8 +47,8 @@ export default function AdminDashboard() {
         <header style={S.header} className="animate-fade-in-up">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <h1 style={{ fontSize: "2rem", fontWeight: 800 }}>RecruitIQ Admin</h1>
-              <p style={{ color: "#94a3b8" }}>System overview and candidate management</p>
+              <h1 style={{ fontSize: "2rem", fontWeight: 800 }}>Udyogh Mitra Admin</h1>
+              <p style={{ color: "#94a3b8" }}>Siddipet Police Recruitment Overview</p>
             </div>
             <button className="btn-secondary" onClick={() => router.push("/")}>
               ← Back to Portal
