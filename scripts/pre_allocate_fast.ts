@@ -1,5 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
+type CompanyRow = {
+  company_name: string;
+  sector: string | null;
+  education: string | null;
+  vacancy: number | null;
+  assigned_count: number | null;
+};
+
+type CandidateRow = {
+  id: string;
+  education_qualification: string | null;
+  preferred_sector: string | null;
+};
+
+type AllocationInsert = {
+  candidate_id: string;
+  company_name: string;
+  sector: string;
+};
+
 const supabaseUrl = 'https://tnkadvphfswtzoltehpk.supabase.co';
 const supabaseKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRua2FkdnBoZnN3dHpvbHRlaHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MzM5OTYsImV4cCI6MjA5MjUwOTk5Nn0.v764MJbNLF6xRJCd78VTSCvFnSl_1ppm1GUnUxv1eBQ';
@@ -13,10 +33,11 @@ async function preAllocateFast() {
     .from('Company_details')
     .select('*');
   if (compError || !allCompanies) return console.error('❌ Error fetching companies');
+  const companyRows = allCompanies as CompanyRow[];
 
   // Create a local tracker for assigned counts
-  const companyTracker = new Map();
-  allCompanies.forEach((c) => companyTracker.set(c.company_name, c.assigned_count || 0));
+  const companyTracker = new Map<string, number>();
+  companyRows.forEach((c) => companyTracker.set(c.company_name, c.assigned_count || 0));
 
   let totalProcessed = 0;
   const batchSize = 500;
@@ -29,13 +50,13 @@ async function preAllocateFast() {
       .range(offset, offset + batchSize - 1);
 
     if (error || !candidates || candidates.length === 0) break;
+    const candidateRows = candidates as CandidateRow[];
 
     console.log(`📦 Processing batch ${offset / batchSize + 1}...`);
 
-    const allocationsToInsert = [];
-    const candidateUpdates = [];
+    const allocationsToInsert: AllocationInsert[] = [];
 
-    for (const candidate of candidates) {
+    for (const candidate of candidateRows) {
       // --- ROUTING LOGIC (IN-MEMORY) ---
       const education = (candidate.education_qualification || '').toUpperCase();
       const preference = (candidate.preferred_sector || '').toLowerCase();
@@ -56,7 +77,7 @@ async function preAllocateFast() {
       }
 
       // Filter and sort companies in-memory
-      const filtered = allCompanies
+      const filtered = companyRows
         .filter((c) => c.sector === assigned_sector)
         .map((c) => {
           const compEdu = (c.education || '').toUpperCase();
@@ -64,11 +85,20 @@ async function preAllocateFast() {
           if (education === compEdu) eduScore = 100;
           else if (education.includes('B.TECH') && compEdu.includes('DEGREE')) eduScore = 50;
 
-          return { ...c, eduScore, currentAssigned: companyTracker.get(c.company_name) };
+          return {
+            ...c,
+            eduScore,
+            vacancyValue: c.vacancy ?? 0,
+            currentAssigned: companyTracker.get(c.company_name) ?? 0,
+          };
         })
         .sort((a, b) => {
           if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
-          return a.vacancy - a.currentAssigned - (b.vacancy - b.currentAssigned);
+          return (
+            a.vacancyValue -
+            a.currentAssigned -
+            (b.vacancyValue - b.currentAssigned)
+          );
         })
         .slice(0, 5);
 
@@ -84,13 +114,7 @@ async function preAllocateFast() {
 
         // Update local counter for top company
         const top = filtered[0].company_name;
-        companyTracker.set(top, companyTracker.get(top) + 1);
-
-        candidateUpdates.push({
-          id: candidate.id,
-          assigned_sector,
-          viewed_at: new Date().toISOString(),
-        });
+        companyTracker.set(top, (companyTracker.get(top) ?? 0) + 1);
       }
     }
 
