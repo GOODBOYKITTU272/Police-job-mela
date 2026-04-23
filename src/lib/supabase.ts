@@ -89,6 +89,7 @@ export interface Job {
 
 export async function getCandidateById(input: string): Promise<CandidateWithApplications[] | null> {
   const query = input.trim();
+  let candidates: Candidate[] = [];
   
   // 1. Try match on ID, Phone, Email, or Aadhar (Case-Insensitive)
   const { data: matches } = await supabase
