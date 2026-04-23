@@ -168,6 +168,21 @@ export default function CandidateDashboard() {
           </div>
         </header>
 
+        {/* Motivation Card */}
+        <div className="animate-fade-in-up" style={S.motivationCard}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: "1.8rem" }}>🚀</span>
+            <div>
+              <p style={{ fontSize: "1.05rem", fontWeight: 700, color: "#2dd4a8", margin: 0 }}>
+                Great job showing up today!
+              </p>
+              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4, margin: 0 }}>
+                You are already ahead of the curve. Keep moving forward with confidence!
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Detailed Profile Card */}
         <div className="glass-card animate-fade-in-up" style={S.profileCard}>
           <h3 style={S.profileTitle}>📋 Detailed Profile</h3>
@@ -283,6 +298,13 @@ const S: Record<string, React.CSSProperties> = {
     width: "100%",
     height: "auto",
     display: "block",
+  },
+  motivationCard: {
+    padding: "20px 24px",
+    background: "linear-gradient(135deg, rgba(45,212,168,0.1), rgba(79,140,255,0.05))",
+    border: "1px solid rgba(45,212,168,0.15)",
+    borderRadius: "16px",
+    marginTop: 4,
   },
   header: { display: "flex", flexDirection: "column", gap: 16 },
   backBtn: { alignSelf: "flex-start" },
