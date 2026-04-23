@@ -137,6 +137,15 @@ export default function CandidateDashboard() {
   return (
     <div style={S.page}>
       <div style={S.container}>
+        {/* Official Banner */}
+        <div className="animate-fade-in" style={S.bannerWrap}>
+          <img 
+            src="/banner.png" 
+            alt="Siddipet Police Udyoga Mitra 2026" 
+            style={S.bannerImg} 
+          />
+        </div>
+
         {/* Header */}
         <header style={S.header}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -261,6 +270,20 @@ const S: Record<string, React.CSSProperties> = {
   loadingPulse: { fontSize: "3rem", color: "#2dd4a8", animation: "pulse 1.5s infinite" },
   loadingText: { color: "#94a3b8", marginTop: 16 },
   errorCard: { textAlign: "center", padding: "80px 0" },
+
+  bannerWrap: {
+    width: "100%",
+    borderRadius: "16px",
+    overflow: "hidden",
+    border: "1px solid rgba(255,255,255,0.1)",
+    marginBottom: "12px",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+  },
+  bannerImg: {
+    width: "100%",
+    height: "auto",
+    display: "block",
+  },
   header: { display: "flex", flexDirection: "column", gap: 16 },
   backBtn: { alignSelf: "flex-start" },
   headerInfo: { display: "flex", alignItems: "center", gap: 16 },
