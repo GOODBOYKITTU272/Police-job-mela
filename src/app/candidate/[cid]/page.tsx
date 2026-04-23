@@ -300,11 +300,7 @@ const S: Record<string, React.CSSProperties> = {
     height: "auto",
     display: "block",
   },
-  motivationCard: {
-    padding: "20px 24px",
-    background: "linear-gradient(135deg, rgba(45,212,168,0.1), rgba(79,140,255,0.05))",
-    border: "1px solid rgba(45,212,168,0.15)",
-    borderRadius: "16px",
+  },
   header: { display: "flex", flexDirection: "column", gap: 16 },
   backBtn: { alignSelf: "flex-start" },
   headerInfo: { display: "flex", alignItems: "center", gap: 16 },
