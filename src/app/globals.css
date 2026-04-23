@@ -13,38 +13,33 @@
 
 /* ── Design Tokens ──────────────────────────────────────────── */
 :root {
-  /* Background layers */
-  --bg-base: #06080f;
-  --bg-surface: #0c1019;
-  --bg-elevated: #121824;
-  --bg-hover: #1a2235;
-  --bg-glass: rgba(255, 255, 255, 0.03);
-  --bg-glass-hover: rgba(255, 255, 255, 0.06);
+  /* Background layers - Official Light Mode */
+  --bg-base: #f8faff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-hover: #eef2f6;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-glass-hover: rgba(255, 255, 255, 0.9);
 
-  /* Accent colors */
-  --accent-teal: #2dd4a8;
-  --accent-teal-glow: rgba(45, 212, 168, 0.15);
-  --accent-blue: #4f8cff;
-  --accent-blue-glow: rgba(79, 140, 255, 0.15);
-  --accent-purple: #a78bfa;
-  --accent-purple-glow: rgba(167, 139, 250, 0.15);
-  --accent-amber: #f59e0b;
-  --accent-amber-glow: rgba(245, 158, 11, 0.15);
-  --accent-red: #ef4444;
-  --accent-red-glow: rgba(239, 68, 68, 0.15);
-  --accent-green: #22c55e;
-  --accent-green-glow: rgba(34, 197, 94, 0.15);
-
-  /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
+  /* Official Department Colors */
+  --accent-navy: #001A3D; /* From the banner text */
+  --accent-navy-glow: rgba(0, 26, 61, 0.08);
+  --accent-red: #E31E24;  /* From the logo */
+  --accent-red-glow: rgba(227, 30, 36, 0.1);
+  --accent-gold: #c5a059; /* Official emblem gold */
+  --accent-gold-glow: rgba(197, 160, 89, 0.15);
+  --accent-teal: #001A3D; /* Replaced with Navy */
+  
+  /* Text - High Contrast for Official look */
+  --text-primary: #001A3D;
+  --text-secondary: #475569;
   --text-muted: #64748b;
-  --text-dim: #475569;
+  --text-dim: #94a3b8;
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-accent: rgba(45, 212, 168, 0.3);
+  /* Borders - Subdued Navy */
+  --border-subtle: rgba(0, 26, 61, 0.06);
+  --border-default: rgba(0, 26, 61, 0.12);
+  --border-accent: rgba(0, 26, 61, 0.3);
 
   /* Radius */
   --radius-sm: 8px;
@@ -53,11 +48,11 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
-  --shadow-glow-teal: 0 0 20px rgba(45, 212, 168, 0.2);
+  /* Shadows - Cleaner for Light Mode */
+  --shadow-sm: 0 1px 3px rgba(0,26,61,0.1);
+  --shadow-md: 0 4px 12px rgba(0,26,61,0.08);
+  --shadow-lg: 0 12px 40px rgba(0,26,61,0.12);
+  --shadow-glow-teal: 0 0 20px rgba(0, 26, 61, 0.1);
   --shadow-glow-blue: 0 0 20px rgba(79, 140, 255, 0.2);
 
   /* Transitions */
@@ -86,53 +81,44 @@ body {
   overflow-x: hidden;
 }
 
-/* ── Animated Background ────────────────────────────────────── */
+/* ── Official Background ────────────────────────────────────── */
 body::before {
   content: '';
   position: fixed;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: 
-    radial-gradient(ellipse at 20% 50%, rgba(45, 212, 168, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(79, 140, 255, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(167, 139, 250, 0.03) 0%, transparent 50%);
-  animation: backgroundDrift 25s ease-in-out infinite alternate;
+    radial-gradient(circle at 100% 0%, rgba(227, 30, 36, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 0% 100%, rgba(0, 26, 61, 0.03) 0%, transparent 40%);
   pointer-events: none;
   z-index: -1;
 }
 
-@keyframes backgroundDrift {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(-3%, 2%) rotate(1deg); }
-  100% { transform: translate(2%, -2%) rotate(-1deg); }
-}
-
 /* ── Typography ─────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-weight: 800;
+  color: var(--accent-navy);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 h1 { font-size: 2.5rem; }
 h2 { font-size: 1.75rem; }
 h3 { font-size: 1.25rem; }
 
-/* ── Glass Card ─────────────────────────────────────────────── */
+/* ── Official Card ─────────────────────────────────────────── */
 .glass-card {
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .glass-card:hover {
-  background: var(--bg-glass-hover);
-  border-color: var(--border-default);
+  border-color: var(--accent-navy);
   box-shadow: var(--shadow-md);
 }
 
@@ -142,23 +128,24 @@ h3 { font-size: 1.25rem; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 28px;
-  background: linear-gradient(135deg, var(--accent-teal), #1fa87e);
-  color: #06080f;
+  padding: 14px 32px;
+  background: var(--accent-navy);
+  color: #ffffff;
   font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: 700;
+  font-size: 1rem;
   border: none;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-base);
   text-decoration: none;
-  box-shadow: var(--shadow-glow-teal);
+  box-shadow: 0 4px 14px rgba(0, 26, 61, 0.2);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(45, 212, 168, 0.35);
+  background: #002b66;
+  box-shadow: 0 6px 20px rgba(0, 26, 61, 0.3);
 }
 
 .btn-primary:active {

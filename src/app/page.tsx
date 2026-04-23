@@ -16,11 +16,6 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* Decorative orbs */}
-      <div style={styles.orb1} />
-      <div style={styles.orb2} />
-      <div style={styles.orb3} />
-
       <main style={styles.main}>
         {/* Official Banner */}
         <div className="animate-fade-in" style={styles.bannerWrap}>
@@ -113,7 +108,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    overflow: "hidden",
     padding: "40px 16px",
   },
   orb1: {
@@ -199,15 +193,13 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "16px",
   },
   headingAccent: {
-    background: "linear-gradient(135deg, #2dd4a8, #4f8cff)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    color: "#E31E24",
   },
   subheading: {
-    fontSize: "1.05rem",
-    color: "#94a3b8",
-    lineHeight: 1.6,
-    maxWidth: "480px",
+    fontSize: "1.1rem",
+    color: "#475569",
+    lineHeight: 1.5,
+    maxWidth: "500px",
     margin: "0 auto",
   },
   lookupCard: {
@@ -215,12 +207,14 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(255,255,255,0.06)",
     borderRadius: "16px",
     padding: "32px",
+    textAlign: "center",
     backdropFilter: "blur(12px)",
   },
   cardTitle: {
-    fontSize: "1.2rem",
-    fontWeight: 700,
-    marginBottom: "6px",
+    fontSize: "1.4rem",
+    fontWeight: 800,
+    marginBottom: "8px",
+    color: "#001A3D",
   },
   cardSub: {
     fontSize: "0.9rem",
