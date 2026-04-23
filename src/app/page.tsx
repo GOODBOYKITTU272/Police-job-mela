@@ -47,20 +47,19 @@ export default function Home() {
           </p>
         </div>
 
-        {/* CID Lookup */}
         <div
           className="animate-fade-in-up stagger-2"
           style={styles.lookupCard}
         >
-          <h2 style={styles.cardTitle}>🔍 Candidate Lookup</h2>
+          <h2 style={styles.cardTitle}>🔍 Candidate Status Lookup</h2>
           <p style={styles.cardSub}>
-            Enter your unique Candidate ID to view your personalized dashboard
+            Enter your <strong>WhatsApp Mobile Number</strong> or Candidate ID to view your dashboard
           </p>
           <div style={styles.inputRow}>
             <input
               type="text"
               className="input-field input-large"
-              placeholder="CID101"
+              placeholder="e.g. 9876543210"
               value={cid}
               onChange={(e) => setCid(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}

@@ -71,19 +71,33 @@ export interface Job {
 
 // ── API Functions ────────────────────────────────────────────
 
-export async function getCandidateById(cid: string): Promise<CandidateWithApplications | null> {
-  const { data: candidate, error: cErr } = await supabase
+export async function getCandidateById(input: string): Promise<CandidateWithApplications | null> {
+  const query = input.trim();
+  
+  // Try lookup by ID first (case-insensitive)
+  let { data: candidate, error: cErr } = await supabase
     .from('candidates')
     .select('*')
-    .eq('id', cid.toUpperCase())
-    .single();
+    .ilike('id', query)
+    .maybeSingle();
+
+  // If not found, try lookup by Phone
+  if (!candidate) {
+    const { data: phoneCandidate, error: pErr } = await supabase
+      .from('candidates')
+      .select('*')
+      .eq('phone', query)
+      .maybeSingle();
+    
+    if (phoneCandidate) candidate = phoneCandidate;
+  }
 
   if (cErr || !candidate) return null;
 
   const { data: applications, error: aErr } = await supabase
     .from('applications')
     .select('*')
-    .eq('candidate_id', cid.toUpperCase())
+    .eq('candidate_id', candidate.id)
     .order('match_percent', { ascending: false });
 
   if (aErr) return null;
