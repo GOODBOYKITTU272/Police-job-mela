@@ -63,6 +63,7 @@ export default function Home() {
               value={cid}
               onChange={(e) => setCid(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+              autoComplete="off"
               id="cid-input"
             />
             <button
