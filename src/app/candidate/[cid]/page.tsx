@@ -85,9 +85,9 @@ export default function CandidateDashboard() {
         <div style={S.container}>
           <div style={S.errorCard}>
             <span style={{ fontSize: "3rem" }}>🔍</span>
-            <h2 style={{ marginBottom: 8 }}>{error || "Candidate not found"}</h2>
-            <p style={{ color: "#94a3b8", marginBottom: 20 }}>
-              Please check the ID or Phone and try again.
+            <h2 style={{ marginBottom: 12 }}>{error || "No candidate found"}</h2>
+            <p style={{ color: "#475569", marginBottom: 24, maxWidth: "400px", margin: "0 auto 24px auto", lineHeight: 1.6 }}>
+              Don't worry! You can try searching with your <strong>Mobile Number</strong>, <strong>Aadhar Number</strong>, or <strong>Candidate ID</strong> as alternatives.
             </p>
             <button className="btn-primary" onClick={() => router.push("/")}>
               ← Back to Home
