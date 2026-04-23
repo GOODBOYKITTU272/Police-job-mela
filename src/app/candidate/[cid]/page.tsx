@@ -35,7 +35,7 @@ function matchLevel(pct: number): string {
 export default function CandidateDashboard() {
   const params = useParams();
   const router = useRouter();
-  const cidParam = (params.cid as string)?.toUpperCase();
+  const cidParam = decodeURIComponent(params.cid as string).trim().toUpperCase();
 
   const [candidates, setCandidates] = useState<CandidateWithApplications[] | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateWithApplications | null>(null);
