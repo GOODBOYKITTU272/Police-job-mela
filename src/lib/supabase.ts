@@ -37,6 +37,8 @@ export interface Candidate {
   aadhar_number?: string | null;
   remarks?: string | null;
   preferred_sector?: string | null;
+  assigned_sector?: string | null;
+  viewed_at?: string | null;
   created_at: string;
 }
 
@@ -86,6 +88,7 @@ export interface RoutingCompany {
   education?: string | null;
   vacancy?: number | null;
   assigned_count?: number | null;
+  remaining?: number | null;
   intent?: CandidateIntent;
 }
 
@@ -505,9 +508,13 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
       return b.available - a.available;
     })
     .slice(0, 5)
-    .map(({ eduScore, available, ...publicFields }) => ({
-      ...publicFields,
-      intent: intentMap.get(publicFields.company_name.toLowerCase()) || 'Pending',
+    .map((c) => ({
+      company_name: c.company_name,
+      sector: c.sector,
+      education: c.education,
+      vacancy: c.vacancy,
+      assigned_count: c.assigned_count,
+      intent: intentMap.get(c.company_name.toLowerCase()) || 'Pending',
     }));
 
   return { assigned_sector, companies };
@@ -943,3 +950,4 @@ export function computeIntelligence(applications: Application[]): IntelligenceSu
     prioritySuggestion,
   };
 }
+

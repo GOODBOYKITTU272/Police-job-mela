@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAdminStats,
@@ -10,9 +10,15 @@ import {
   CompanyDirectoryRow,
 } from "@/lib/supabase";
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<{
+    totalCandidates: number;
+    totalApplications: number;
+    statusBreakdown: Record<string, number>;
+    categoryBreakdown: Record<string, number>;
+    multiPipeline: number;
+  } | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [companies, setCompanies] = useState<CompanyDirectoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -455,7 +461,7 @@ export default function AdminDashboard() {
   );
 }
 
-const S: Record<string, React.CSSProperties> = {
+const S: Record<string, CSSProperties> = {
   page: { minHeight: "100vh", padding: "32px 16px" },
   container: { maxWidth: 1080, margin: "0 auto" },
   header: { marginBottom: 32 },
@@ -566,3 +572,5 @@ function getSortIndicator<
   if (sortState.key !== key) return "↕";
   return sortState.direction === "asc" ? "↑" : "↓";
 }
+
+export default AdminDashboard;

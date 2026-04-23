@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){if(e&&e.code!=='ENOENT')throw e;}\"",
+    "dev": "node scripts/dev-webpack.cjs",
+    "dev:fresh": "npm run clean && node scripts/dev-webpack.cjs",
+    "dev:turbo": "node scripts/dev-turbo.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@swc/helpers": "^0.5.15",
     "@supabase/supabase-js": "^2.104.0",
     "csv-parse": "^6.2.1",
     "dotenv": "^17.4.2",

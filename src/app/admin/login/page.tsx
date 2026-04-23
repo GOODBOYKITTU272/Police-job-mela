@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { validateAdminLogin } from "@/lib/supabase";
 
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
     display: "flex",

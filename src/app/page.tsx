@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -19,10 +20,13 @@ export default function Home() {
       <main style={styles.main}>
         {/* Official Banner */}
         <div className="animate-fade-in" style={styles.bannerWrap}>
-          <img 
-            src="/banner.png" 
-            alt="Siddipet Police Udyoga Mitra 2026" 
-            style={styles.bannerImg} 
+          <Image
+            src="/banner.png"
+            alt="Siddipet Police Udyoga Mitra 2026"
+            width={1200}
+            height={320}
+            priority
+            style={{ ...styles.bannerImg, height: "auto" }}
           />
         </div>
 
@@ -112,6 +116,10 @@ export default function Home() {
           <p style={styles.footerText}>
             Siddipet POLICE UDYOGA MITRA — v2.0 (23/04/2026)
           </p>
+          <div style={styles.poweredBy}>
+            <span style={styles.poweredText}>POWERED BY</span>
+            <Image src="/applywizz_logo.jpg" alt="ApplyWizz" width={140} height={40} style={styles.poweredLogo} />
+          </div>
         </footer>
       </main>
     </div>
@@ -212,6 +220,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headingAccent: {
     color: "#E31E24",
+  },
+  poweredBy: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    marginTop: "16px",
+  },
+  poweredText: {
+    fontSize: "0.65rem",
+    fontWeight: 800,
+    color: "#475569",
+    letterSpacing: "0.1em",
+  },
+  poweredLogo: {
+    height: "32px",
+    width: "auto",
   },
   subheading: {
     fontSize: "1.1rem",

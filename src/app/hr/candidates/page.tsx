@@ -115,35 +115,46 @@ export default function HrCandidatesPage() {
               Showing candidates allocated to your company.
             </p>
           </div>
-          <button className="btn-secondary" onClick={handleLogout} style={styles.logoutBtn}>
-            Logout
-          </button>
+          <div style={styles.headerActions}>
+            <button className="btn-secondary" type="button" onClick={() => router.push("/")}>
+              ← Back to Portal
+            </button>
+            <button className="btn-secondary" type="button" onClick={handleLogout} style={styles.logoutBtn}>
+              Logout
+            </button>
+          </div>
         </header>
 
         <section style={styles.filterBar}>
           <div style={styles.filterBarInner}>
-            <span style={styles.filterLabel}>
-              Filter by Intent
-            </span>
-            <div style={styles.filterButtonsWrap}>
-              {(["All", "Pending", "Not Interested", "Will Attend"] as const).map(
-                (option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setIntentFilter(option)}
-                    style={{
-                      ...styles.filterBtn,
-                      ...(intentFilter === option
-                        ? styles.filterBtnActive
-                        : styles.filterBtnInactive),
-                    }}
-                  >
-                    {option}
-                  </button>
-                )
-              )}
+            <div style={styles.filterLeft}>
+              <span style={styles.filterLabel}>Filter by Intent</span>
+              <div style={styles.filterButtonsWrap}>
+                {(["All", "Pending", "Not Interested", "Will Attend"] as const).map(
+                  (option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setIntentFilter(option)}
+                      style={{
+                        ...styles.filterBtn,
+                        ...(intentFilter === option
+                          ? styles.filterBtnActive
+                          : styles.filterBtnInactive),
+                      }}
+                    >
+                      {option}
+                    </button>
+                  )
+                )}
+              </div>
             </div>
+            {!loading ? (
+              <span style={styles.filterCount}>
+                {filteredCandidates.length}{" "}
+                {filteredCandidates.length === 1 ? "candidate" : "candidates"}
+              </span>
+            ) : null}
           </div>
         </section>
 
@@ -311,6 +322,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "16px",
     flexWrap: "wrap",
   },
+  headerActions: {
+    display: "flex",
+    gap: "10px",
+    flexShrink: 0,
+  },
   logoutBtn: {
     minWidth: "110px",
   },
@@ -321,9 +337,25 @@ const styles: Record<string, React.CSSProperties> = {
   filterBarInner: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
+    gap: "12px",
+    flexWrap: "wrap",
+    width: "100%",
+  },
+  filterLeft: {
+    display: "flex",
+    alignItems: "center",
     gap: "10px",
     flexWrap: "wrap",
+    flex: "1 1 auto",
+    minWidth: 0,
+  },
+  filterCount: {
+    fontSize: "0.95rem",
+    fontWeight: 800,
+    color: "#001A3D",
+    whiteSpace: "nowrap" as const,
+    flexShrink: 0,
   },
   filterLabel: {
     fontSize: "0.82rem",
