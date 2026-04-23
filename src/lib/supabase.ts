@@ -62,6 +62,18 @@ export interface CandidateWithApplications extends Candidate {
   applications: Application[];
 }
 
+export interface HrCandidatePreview {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  gender: string | null;
+  village: string | null;
+  mandal: string | null;
+  district: string | null;
+  education_qualification: string | null;
+}
+
 // ── Intelligence Types ───────────────────────────────────────
 
 export interface IntelligenceSummary {
@@ -138,6 +150,99 @@ export async function getAllCandidates(): Promise<Candidate[]> {
 
   if (error) return [];
   return data || [];
+}
+
+export type CompanyLoginResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid_credentials' | 'no_visible_company_rows' };
+
+function normalizeCredentialValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value).trim();
+}
+
+function getCredentialFromRow(
+  row: Record<string, unknown>,
+  target: 'email' | 'password'
+): string {
+  const normalizedTarget = target.toLowerCase();
+  const keys = Object.keys(row);
+  const key = keys.find((candidateKey) => {
+    const simplified = candidateKey.toLowerCase().replace(/[^a-z]/g, '');
+    return simplified === normalizedTarget;
+  });
+
+  if (!key) {
+    return '';
+  }
+  return normalizeCredentialValue(row[key]);
+}
+
+export async function validateCompanyLogin(email: string, password: string): Promise<CompanyLoginResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPassword = password.trim();
+
+  if (!normalizedEmail || !normalizedPassword) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  // Preferred path: secure RPC that checks credentials server-side without exposing table rows.
+  const { data: rpcData, error: rpcError } = await supabase.rpc('verify_company_login', {
+    p_email: normalizedEmail,
+    p_password: normalizedPassword,
+  });
+
+  if (!rpcError) {
+    if (rpcData === true) {
+      return { ok: true };
+    }
+    if (rpcData === false) {
+      return { ok: false, reason: 'invalid_credentials' };
+    }
+  }
+
+  const tableNames = ['Company_details', 'company_details'];
+  let visibleRows: Record<string, unknown>[] = [];
+
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase.from(tableName).select('*').limit(200);
+    if (!error && data && data.length > 0) {
+      visibleRows = data as Record<string, unknown>[];
+      break;
+    }
+  }
+
+  if (visibleRows.length === 0) {
+    return { ok: false, reason: 'no_visible_company_rows' };
+  }
+
+  const found = visibleRows.some((row) => {
+    const rowEmail = getCredentialFromRow(row, 'email').toLowerCase();
+    const rowPassword = getCredentialFromRow(row, 'password');
+    return rowEmail === normalizedEmail && rowPassword === normalizedPassword;
+  });
+
+  if (!found) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  return { ok: true };
+}
+
+export async function getHrCandidatesPreview(limit = 3): Promise<HrCandidatePreview[]> {
+  const { data, error } = await supabase
+    .from('candidates')
+    .select('id, name, email, phone, gender, village, mandal, district, education_qualification')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return [];
+  }
+
+  return (data || []) as HrCandidatePreview[];
 }
 
 export async function getAdminStats() {

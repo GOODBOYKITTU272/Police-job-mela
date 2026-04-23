@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -71,6 +71,21 @@ export default function Home() {
               View Dashboard →
             </button>
           </div>
+        </div>
+
+        <div className="animate-fade-in-up stagger-3" style={styles.hrCard}>
+          <h2 style={styles.hrTitle}>For Company HR Teams</h2>
+          <p style={styles.hrSub}>
+            Login to review shortlisted candidates and hiring data.
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => router.push("/hr/login")}
+            style={styles.hrBtn}
+            id="hr-login-btn"
+          >
+            HR Login
+          </button>
         </div>
 
 
@@ -215,6 +230,27 @@ const styles: Record<string, React.CSSProperties> = {
   lookupBtn: {
     whiteSpace: "nowrap" as const,
     minWidth: "160px",
+  },
+  hrCard: {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: "16px",
+    padding: "28px 32px",
+    textAlign: "center",
+  },
+  hrTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 800,
+    color: "#001A3D",
+    marginBottom: "8px",
+  },
+  hrSub: {
+    fontSize: "0.95rem",
+    color: "#64748b",
+    marginBottom: "18px",
+  },
+  hrBtn: {
+    minWidth: "180px",
   },
   resultLabel: {
     fontSize: "0.7rem",
