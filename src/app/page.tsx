@@ -2,99 +2,16 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx";
-import { uploadExcelData, ExcelRow } from "@/lib/supabase";
 
 export default function Home() {
   const router = useRouter();
   const [cid, setCid] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{
-    candidatesCreated: number;
-    applicationsCreated: number;
-    duplicatesSkipped: number;
-  } | null>(null);
-  const [uploadError, setUploadError] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLookup = () => {
     const trimmed = cid.trim().toUpperCase();
     if (trimmed) {
       router.push(`/candidate/${trimmed}`);
     }
-  };
-
-  const processExcel = useCallback(async (file: File) => {
-    setUploading(true);
-    setUploadError("");
-    setUploadResult(null);
-
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-
-      const rows: ExcelRow[] = [];
-
-      for (const sheetName of workbook.SheetNames) {
-        if (sheetName === "Summary") continue;
-
-        const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-
-        for (const row of jsonData) {
-          const userId = String(row["User ID"] || "").trim();
-          if (!userId || !userId.match(/^\d+$/)) continue;
-
-          const jobId = String(row["Job ID"] || "").trim();
-          if (!jobId) continue;
-
-          let matchPct = String(row["Match %"] || "0").replace("%", "").trim();
-          const matchNum = parseInt(matchPct) || 0;
-
-          rows.push({
-            user_id: userId,
-            name: String(row["Candidate Name"] || "Unknown").trim(),
-            email: `user${userId}@recruitment.local`,
-            job_id: jobId,
-            role: String(row["Role"] || "Unknown").trim(),
-            company: String(row["Company"] || "Unknown").trim(),
-            category: String(row["Category"] || sheetName).trim(),
-            match_percent: matchNum,
-            reason: String(row["Reason"] || "").trim(),
-          });
-        }
-      }
-
-      if (rows.length === 0) {
-        setUploadError(
-          "No valid data found. Ensure your Excel has columns: User ID, Job ID, Candidate Name, Role, Company, Match %"
-        );
-        setUploading(false);
-        return;
-      }
-
-      const result = await uploadExcelData(rows);
-      setUploadResult(result);
-    } catch (err) {
-      setUploadError(
-        `Upload failed: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
-    }
-
-    setUploading(false);
-  }, []);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processExcel(file);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) processExcel(file);
   };
 
   return (
@@ -152,108 +69,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Excel Upload */}
-        <div
-          className="animate-fade-in-up stagger-3"
-          style={styles.uploadCard}
-        >
-          <h2 style={styles.cardTitle}>📊 Upload Recruitment Data</h2>
-          <p style={styles.cardSub}>
-            Upload your Excel file to auto-process candidates, assign CIDs, and
-            merge applications
-          </p>
-
-          <div
-            className={`upload-zone ${dragOver ? "drag-over" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            id="upload-zone"
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileSelect}
-              style={{ display: "none" }}
-              id="file-input"
-            />
-            <div className="upload-icon">
-              {uploading ? "⏳" : "📁"}
-            </div>
-            <div className="upload-title">
-              {uploading
-                ? "Processing your data..."
-                : "Drop Excel file here or click to browse"}
-            </div>
-            <div className="upload-sub">
-              Supports .xlsx, .xls — Columns: User ID, Job ID, Candidate Name,
-              Role, Company, Match %
-            </div>
-          </div>
-
-          {/* Upload Progress */}
-          {uploading && (
-            <div style={styles.progressWrap}>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{ width: "60%", animation: "pulse 1s infinite" }}
-                />
-              </div>
-              <p style={styles.progressText}>
-                Deduplicating candidates & merging applications...
-              </p>
-            </div>
-          )}
-
-          {/* Upload Result */}
-          {uploadResult && (
-            <div className="alert-card success" style={styles.resultCard}>
-              <span style={{ fontSize: "1.5rem" }}>✅</span>
-              <div>
-                <strong>Upload Complete!</strong>
-                <div style={styles.resultGrid}>
-                  <div style={styles.resultItem}>
-                    <span style={styles.resultNum}>
-                      {uploadResult.candidatesCreated}
-                    </span>
-                    <span style={styles.resultLabel}>Candidates Created</span>
-                  </div>
-                  <div style={styles.resultItem}>
-                    <span style={styles.resultNum}>
-                      {uploadResult.applicationsCreated}
-                    </span>
-                    <span style={styles.resultLabel}>Applications Added</span>
-                  </div>
-                  <div style={styles.resultItem}>
-                    <span style={styles.resultNum}>
-                      {uploadResult.duplicatesSkipped}
-                    </span>
-                    <span style={styles.resultLabel}>Duplicates Skipped</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Upload Error */}
-          {uploadError && (
-            <div className="alert-card danger" style={styles.resultCard}>
-              <span style={{ fontSize: "1.5rem" }}>❌</span>
-              <div>
-                <strong>Upload Error</strong>
-                <p style={{ marginTop: 4, fontSize: "0.9rem" }}>
-                  {uploadError}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Quick Links */}
         <div
@@ -398,41 +213,6 @@ const styles: Record<string, React.CSSProperties> = {
   lookupBtn: {
     whiteSpace: "nowrap" as const,
     minWidth: "160px",
-  },
-  uploadCard: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    borderRadius: "16px",
-    padding: "32px",
-    backdropFilter: "blur(12px)",
-  },
-  progressWrap: {
-    marginTop: "16px",
-  },
-  progressText: {
-    fontSize: "0.85rem",
-    color: "#94a3b8",
-    marginTop: "8px",
-    textAlign: "center" as const,
-  },
-  resultCard: {
-    marginTop: "16px",
-  },
-  resultGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "12px",
-    marginTop: "12px",
-  },
-  resultItem: {
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-  },
-  resultNum: {
-    fontSize: "1.5rem",
-    fontWeight: 800,
-    fontFamily: "'JetBrains Mono', monospace",
   },
   resultLabel: {
     fontSize: "0.7rem",
