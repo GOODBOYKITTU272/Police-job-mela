@@ -22,6 +22,15 @@ export default function Home() {
       <div style={styles.orb3} />
 
       <main style={styles.main}>
+        {/* Official Banner */}
+        <div className="animate-fade-in" style={styles.bannerWrap}>
+          <img 
+            src="/banner.png" 
+            alt="Siddipet Police Udyoga Mitra 2026" 
+            style={styles.bannerImg} 
+          />
+        </div>
+
         {/* Hero */}
         <div className="animate-fade-in-up" style={styles.hero}>
           <div style={styles.brandBadge}>
@@ -137,6 +146,19 @@ const styles: Record<string, React.CSSProperties> = {
     background: "radial-gradient(circle, rgba(167,139,250,0.04), transparent 70%)",
     pointerEvents: "none",
     transform: "translateX(-50%)",
+  },
+  bannerWrap: {
+    width: "100%",
+    borderRadius: "16px",
+    overflow: "hidden",
+    border: "1px solid rgba(255,255,255,0.1)",
+    marginBottom: "12px",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+  },
+  bannerImg: {
+    width: "100%",
+    height: "auto",
+    display: "block",
   },
   main: {
     maxWidth: "640px",
