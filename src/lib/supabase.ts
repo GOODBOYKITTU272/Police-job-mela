@@ -487,7 +487,7 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
     assigned_sector = 'Manufacturing / Logistics';
   }
 
-  // Fetch best available companies
+  // Fetch companies in the sector
   const { data: companies, error } = await supabase
     .from('Company_details')
     .select('*')
@@ -498,7 +498,27 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
     return { assigned_sector, companies: [] };
   }
 
-  const processedCompanies = companies
+  // STEP 3: STRICT EDUCATION FILTER
+  const filteredCompanies = companies.filter(c => {
+    const compEdu = (c.education || '').toUpperCase();
+    const candEdu = education; // From line 466
+
+    if (candEdu.includes('B.TECH') || candEdu.includes('BTECH')) {
+      return compEdu.includes('B.TECH') || compEdu.includes('BTECH') || compEdu.includes('ENGINEERING');
+    }
+    if (candEdu.includes('DEGREE') || candEdu.includes('GRADUATE')) {
+      return compEdu.includes('DEGREE') || compEdu.includes('GRADUATE');
+    }
+    if (candEdu.includes('SSC') || candEdu.includes('10TH')) {
+      return compEdu.includes('SSC') || compEdu.includes('10TH');
+    }
+    return true; // Fallback for other cases
+  });
+
+  // If strict filtering returns nothing, show all in sector so they don't see an empty screen
+  const finalSource = filteredCompanies.length > 0 ? filteredCompanies : companies;
+
+  const processedCompanies = finalSource
     .map(c => {
       // Calculate Education Alignment Score
       let eduScore = 0;
