@@ -87,38 +87,48 @@ export interface Job {
 
 // ── API Functions ────────────────────────────────────────────
 
-export async function getCandidateById(input: string): Promise<CandidateWithApplications | null> {
+export async function getCandidateById(input: string): Promise<CandidateWithApplications[] | null> {
   const query = input.trim();
   
-  // Try lookup by ID first (case-insensitive)
-  let { data: candidate, error: cErr } = await supabase
+  let candidates: Candidate[] = [];
+
+  // 1. Try lookup by ID (e.g. CID100)
+  const { data: idMatches } = await supabase
     .from('candidates')
     .select('*')
-    .ilike('id', query)
-    .maybeSingle();
+    .ilike('id', query);
 
-  // If not found, try lookup by Phone
-  if (!candidate) {
-    const { data: phoneCandidate, error: pErr } = await supabase
+  if (idMatches && idMatches.length > 0) {
+    candidates = idMatches;
+  } else {
+    // 2. Try lookup by Phone (e.g. 7997832837)
+    const { data: phoneMatches } = await supabase
       .from('candidates')
       .select('*')
-      .eq('phone', query)
-      .maybeSingle();
+      .eq('phone', query);
     
-    if (phoneCandidate) candidate = phoneCandidate;
+    if (phoneMatches) {
+      candidates = phoneMatches;
+    }
   }
 
-  if (cErr || !candidate) return null;
+  if (candidates.length === 0) return null;
 
-  const { data: applications, error: aErr } = await supabase
-    .from('applications')
-    .select('*')
-    .eq('candidate_id', candidate.id)
-    .order('match_percent', { ascending: false });
+  // Enhance all found candidates with their applications
+  const results: CandidateWithApplications[] = [];
+  for (const candidate of candidates) {
+    const { data: applications } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('candidate_id', candidate.id);
+    
+    results.push({
+      ...candidate,
+      applications: applications || []
+    });
+  }
 
-  if (aErr) return null;
-
-  return { ...candidate, applications: applications || [] };
+  return results;
 }
 
 export async function getAllCandidates(): Promise<Candidate[]> {

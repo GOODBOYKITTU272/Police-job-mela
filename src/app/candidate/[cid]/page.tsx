@@ -37,7 +37,8 @@ export default function CandidateDashboard() {
   const router = useRouter();
   const cidParam = (params.cid as string)?.toUpperCase();
 
-  const [candidate, setCandidate] = useState<CandidateWithApplications | null>(null);
+  const [candidates, setCandidates] = useState<CandidateWithApplications[] | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateWithApplications | null>(null);
   const [intel, setIntel] = useState<IntelligenceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -47,15 +48,23 @@ export default function CandidateDashboard() {
     (async () => {
       setLoading(true);
       const data = await getCandidateById(cidParam);
-      if (!data) {
-        setError(`Candidate ${cidParam} not found.`);
+      if (!data || data.length === 0) {
+        setError(`No candidate found for "${cidParam}".`);
       } else {
-        setCandidate(data);
-        setIntel(computeIntelligence(data.applications));
+        setCandidates(data);
+        if (data.length === 1) {
+          setSelectedCandidate(data[0]);
+          setIntel(computeIntelligence(data[0].applications));
+        }
       }
       setLoading(false);
     })();
   }, [cidParam]);
+
+  const handleSelect = (c: CandidateWithApplications) => {
+    setSelectedCandidate(c);
+    setIntel(computeIntelligence(c.applications));
+  };
 
   if (loading) {
     return (
@@ -70,7 +79,7 @@ export default function CandidateDashboard() {
     );
   }
 
-  if (error || !candidate || !intel) {
+  if (error || !candidates) {
     return (
       <div style={S.page}>
         <div style={S.container}>
@@ -78,7 +87,7 @@ export default function CandidateDashboard() {
             <span style={{ fontSize: "3rem" }}>🔍</span>
             <h2 style={{ marginBottom: 8 }}>{error || "Candidate not found"}</h2>
             <p style={{ color: "#94a3b8", marginBottom: 20 }}>
-              Please check the Candidate ID and try again.
+              Please check the ID or Phone and try again.
             </p>
             <button className="btn-primary" onClick={() => router.push("/")}>
               ← Back to Home
@@ -89,24 +98,62 @@ export default function CandidateDashboard() {
     );
   }
 
+  /* ── Selection Screen ──────────────────────────────────── */
+  if (!selectedCandidate && candidates.length > 1) {
+    return (
+      <div style={S.page}>
+        <div style={S.container}>
+          <header style={S.header}>
+            <button className="btn-ghost" onClick={() => router.push("/")} style={S.backBtn}>← Home</button>
+            <h1 style={S.name}>Multiple Candidates Found</h1>
+            <p style={S.email}>Choose the candidate associated with phone {cidParam}:</p>
+          </header>
+          <div style={S.appList}>
+            {candidates.map((c, i) => (
+              <div 
+                key={c.id} 
+                className="glass-card animate-fade-in-up" 
+                style={{ ...S.appCard, cursor: "pointer", animationDelay: `${i * 0.1}s` }}
+                onClick={() => handleSelect(c)}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <h3 style={S.appRole}>{c.name}</h3>
+                    <p style={S.appCompany}>Father: {c.father_name || 'N/A'} • Village: {c.village || 'N/A'}</p>
+                  </div>
+                  <span style={S.cidBadge}>{c.id}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Dashboard (for selected candidate) ─────────────────── */
+  if (!selectedCandidate || !intel) return null;
+
   return (
     <div style={S.page}>
       <div style={S.container}>
         {/* Header */}
         <header style={S.header}>
-          <button className="btn-ghost" onClick={() => router.push("/")} style={S.backBtn}>
-            ← Home
-          </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button className="btn-ghost" onClick={() => candidates.length > 1 ? setSelectedCandidate(null) : router.push("/")} style={S.backBtn}>
+              {candidates.length > 1 ? "← Back to List" : "← Home"}
+            </button>
+          </div>
           <div style={S.headerInfo}>
             <div style={S.avatar}>
-              {candidate.name.charAt(0).toUpperCase()}
+              {selectedCandidate.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 style={S.name}>{candidate.name}</h1>
+              <h1 style={S.name}>{selectedCandidate.name}</h1>
               <div style={S.cidRow}>
-                <span style={S.cidBadge}>{candidate.id}</span>
-                <span style={S.email}>{candidate.email}</span>
-                {candidate.phone && <span style={S.email}>📞 {candidate.phone}</span>}
+                <span style={S.cidBadge}>{selectedCandidate.id}</span>
+                <span style={S.email}>{selectedCandidate.email}</span>
+                {selectedCandidate.phone && <span style={S.email}>📞 {selectedCandidate.phone}</span>}
               </div>
             </div>
           </div>
@@ -116,24 +163,24 @@ export default function CandidateDashboard() {
         <div className="glass-card animate-fade-in-up" style={S.profileCard}>
           <h3 style={S.profileTitle}>📋 Detailed Profile</h3>
           <div style={S.profileGrid}>
-            <ProfileItem label="Father's Name" value={candidate.father_name} />
-            <ProfileItem label="Gender / Age" value={`${candidate.gender || '-'} / ${candidate.age || '-'}`} />
-            <ProfileItem label="Aadhar Number" value={candidate.aadhar_number} />
-            <ProfileItem label="PS Jurisdiction" value={candidate.ps_jurisdiction} />
-            <ProfileItem label="Education" value={candidate.education_qualification} />
-            <ProfileItem label="Village" value={candidate.village} />
-            <ProfileItem label="Mandal" value={candidate.mandal} />
-            <ProfileItem label="District" value={candidate.district} />
-            <ProfileItem label="Languages" value={candidate.languages} />
-            <ProfileItem label="Driving License" value={candidate.driving_license} />
-            <ProfileItem label="Experience" value={candidate.experience} />
-            <ProfileItem label="Preferred Location" value={candidate.preferred_location} />
-            <ProfileItem label="Preferred Sector" value={candidate.preferred_sector} />
+            <ProfileItem label="Father's Name" value={selectedCandidate.father_name} />
+            <ProfileItem label="Gender / Age" value={`${selectedCandidate.gender || '-'} / ${selectedCandidate.age || '-'}`} />
+            <ProfileItem label="Aadhar Number" value={selectedCandidate.aadhar_number} />
+            <ProfileItem label="PS Jurisdiction" value={selectedCandidate.ps_jurisdiction} />
+            <ProfileItem label="Education" value={selectedCandidate.education_qualification} />
+            <ProfileItem label="Village" value={selectedCandidate.village} />
+            <ProfileItem label="Mandal" value={selectedCandidate.mandal} />
+            <ProfileItem label="District" value={selectedCandidate.district} />
+            <ProfileItem label="Languages" value={selectedCandidate.languages} />
+            <ProfileItem label="Driving License" value={selectedCandidate.driving_license} />
+            <ProfileItem label="Experience" value={selectedCandidate.experience} />
+            <ProfileItem label="Preferred Location" value={selectedCandidate.preferred_location} />
+            <ProfileItem label="Preferred Sector" value={selectedCandidate.preferred_sector} />
           </div>
-          {candidate.remarks && (
+          {selectedCandidate.remarks && (
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
               <span style={S.detailLabel}>Remarks</span>
-              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4 }}>{candidate.remarks}</p>
+              <p style={{ fontSize: "0.9rem", color: "#94a3b8", marginTop: 4 }}>{selectedCandidate.remarks}</p>
             </div>
           )}
         </div>
@@ -159,9 +206,14 @@ export default function CandidateDashboard() {
         <section style={S.section}>
           <h2 className="section-title">All Applications</h2>
           <div style={S.appList}>
-            {candidate.applications.map((app, i) => (
+            {selectedCandidate.applications.map((app, i) => (
               <ApplicationCard key={app.id} app={app} index={i} />
             ))}
+            {selectedCandidate.applications.length === 0 && (
+              <div className="glass-card" style={{ padding: 30, textAlign: "center", color: "#64748b" }}>
+                No job applications found yet.
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -223,6 +275,12 @@ function ApplicationCard({ app, index }: { app: Application; index: number }) {
           <span style={S.detailValue}>{app.success_probability}%</span>
         </div>
       </div>
+      {app.next_step && (
+        <div style={S.nextStep}>
+          <span style={S.nextStepIcon}>→</span>
+          <span style={S.nextStepText}>{app.next_step}</span>
+        </div>
+      )}
     </div>
   );
 }
