@@ -185,20 +185,6 @@ export default function CandidateDashboard() {
           )}
         </div>
 
-        {/* Applications List */}
-        <section style={S.section}>
-          <h2 className="section-title">Job Applications</h2>
-          <div style={S.appList}>
-            {selectedCandidate.applications.map((app, i) => (
-              <ApplicationCard key={app.id} app={app} index={i} />
-            ))}
-            {selectedCandidate.applications.length === 0 && (
-              <div className="glass-card" style={{ padding: "30px", textAlign: "center", color: "#64748b", border: "1px dashed rgba(255,255,255,0.1)" }}>
-                No active job applications found.
-              </div>
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );
