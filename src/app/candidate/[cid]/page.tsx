@@ -300,7 +300,6 @@ const S: Record<string, React.CSSProperties> = {
     height: "auto",
     display: "block",
   },
-  },
   header: { display: "flex", flexDirection: "column", gap: 16 },
   backBtn: { alignSelf: "flex-start" },
   headerInfo: { display: "flex", alignItems: "center", gap: 16 },
