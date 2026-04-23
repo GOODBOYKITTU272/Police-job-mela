@@ -141,7 +141,7 @@ export default function CandidateDashboard() {
         <div className="animate-fade-in" style={S.bannerWrap}>
           <img 
             src="/banner.png" 
-            alt="Siddipet Police Udyoga Mitra 2026" 
+            alt="Siddipet POLICE UDYOGA MITRA 2026" 
             style={S.bannerImg} 
           />
         </div>

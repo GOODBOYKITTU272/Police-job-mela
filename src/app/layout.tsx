@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Siddipet Police Udyogh Mitra — Job Portal",
+  title: "Siddipet POLICE UDYOGA MITRA — Job Portal",
   description:
-    "Official Job Mela portal for Siddipet Police. Track applications, pipeline status, and smart matching across multiple job opportunities launched on 23/04/2026.",
+    "Official POLICE UDYOGA MITRA Job Mela portal for Siddipet Police. Track applications, pipeline status, and smart matching across multiple job opportunities.",
 };
 
 export default function RootLayout({

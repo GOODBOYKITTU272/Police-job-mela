@@ -33,7 +33,7 @@ export default function Home() {
             Siddipet Police
           </div>
           <h1 style={styles.heading}>
-            Udyogh <span style={styles.headingAccent}>Mitra</span>
+            POLICE UDYOGA <span style={styles.headingAccent}>MITRA</span>
             <br />
             Job Portal
           </h1>
@@ -78,7 +78,7 @@ export default function Home() {
         {/* Footer */}
         <footer style={styles.footer}>
           <p style={styles.footerText}>
-            Siddipet Police Udyogh Mitra — v2.0 (23/04/2026)
+            Siddipet POLICE UDYOGA MITRA — v2.0 (23/04/2026)
           </p>
         </footer>
       </main>
