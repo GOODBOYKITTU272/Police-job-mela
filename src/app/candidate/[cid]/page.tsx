@@ -1,37 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
   getCandidateById,
-  computeIntelligence,
   getCandidateRouting,
+  updateCandidateAllocationIntent,
   CandidateWithApplications,
-  Application,
-  IntelligenceSummary,
   RoutingResult,
+  CandidateIntent,
 } from "@/lib/supabase";
-
-/* ── Status → Badge class ─────────────────────────────────── */
-function badgeClass(status: string): string {
-  const map: Record<string, string> = {
-    Applied: "badge badge-applied",
-    Shortlisted: "badge badge-shortlisted",
-    "Interview Scheduled": "badge badge-interview",
-    Rejected: "badge badge-rejected",
-    Offer: "badge badge-offer",
-    Matched: "badge badge-matched",
-    "Under Review": "badge badge-review",
-  };
-  return map[status] || "badge badge-review";
-}
-
-/* ── Match color ──────────────────────────────────────────── */
-function matchLevel(pct: number): string {
-  if (pct >= 75) return "high";
-  if (pct >= 50) return "medium";
-  return "low";
-}
 
 /* ── Main Component ───────────────────────────────────────── */
 export default function CandidateDashboard() {
@@ -41,10 +20,10 @@ export default function CandidateDashboard() {
 
   const [candidates, setCandidates] = useState<CandidateWithApplications[] | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateWithApplications | null>(null);
-  const [intel, setIntel] = useState<IntelligenceSummary | null>(null);
   const [routing, setRouting] = useState<RoutingResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savingIntentFor, setSavingIntentFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!cidParam) return;
@@ -58,8 +37,6 @@ export default function CandidateDashboard() {
         if (data.length === 1) {
           const c = data[0];
           setSelectedCandidate(c);
-          setIntel(computeIntelligence(c.applications));
-          
           // Fetch real-time routing
           const r = await getCandidateRouting(c);
           setRouting(r);
@@ -71,9 +48,28 @@ export default function CandidateDashboard() {
 
   const handleSelect = async (c: CandidateWithApplications) => {
     setSelectedCandidate(c);
-    setIntel(computeIntelligence(c.applications));
     const r = await getCandidateRouting(c);
     setRouting(r);
+  };
+
+  const handleIntentChange = async (companyName: string, intent: CandidateIntent) => {
+    if (!selectedCandidate || !routing) return;
+
+    setSavingIntentFor(companyName);
+    const previous = routing;
+
+    setRouting({
+      ...previous,
+      companies: previous.companies.map((company) =>
+        company.company_name === companyName ? { ...company, intent } : company
+      ),
+    });
+
+    const ok = await updateCandidateAllocationIntent(selectedCandidate.id, companyName, intent);
+    if (!ok) {
+      setRouting(previous);
+    }
+    setSavingIntentFor(null);
   };
 
   if (loading) {
@@ -97,7 +93,7 @@ export default function CandidateDashboard() {
             <span style={{ fontSize: "3rem" }}>🔍</span>
             <h2 style={{ marginBottom: 12 }}>{error || "No candidate found"}</h2>
             <p style={{ color: "#475569", marginBottom: 24, maxWidth: "400px", margin: "0 auto 24px auto", lineHeight: 1.6 }}>
-              Don't worry! You can try searching with your <strong>Mobile Number</strong>, <strong>Aadhar Number</strong>, or <strong>Candidate ID</strong> as alternatives.
+              Don&apos;t worry! You can try searching with your <strong>Mobile Number</strong>, <strong>Aadhar Number</strong>, or <strong>Candidate ID</strong> as alternatives.
             </p>
             <button className="btn-primary" onClick={() => router.push("/")}>
               ← Back to Home
@@ -142,17 +138,20 @@ export default function CandidateDashboard() {
   }
 
   /* ── Dashboard (for selected candidate) ─────────────────── */
-  if (!selectedCandidate || !intel) return null;
+  if (!selectedCandidate) return null;
 
   return (
     <div style={S.page}>
       <div style={S.container}>
         {/* Official Banner */}
         <div className="animate-fade-in" style={S.bannerWrap}>
-          <img
+          <Image
             src="/banner.png"
             alt="Siddipet POLICE UDYOGA MITRA 2026"
-            style={S.bannerImg}
+            width={1200}
+            height={320}
+            priority
+            style={{ ...S.bannerImg, height: "auto" }}
           />
         </div>
 
@@ -196,8 +195,9 @@ export default function CandidateDashboard() {
                 <thead>
                   <tr style={S.tableHeader}>
                     <th style={S.th}>Company Name</th>
-                    <th style={S.th}>Vacancies</th>
                     <th style={S.th}>Status</th>
+                    <th style={S.th}>Intent</th>
+                    <th style={S.th}>Vacancies</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -215,12 +215,30 @@ export default function CandidateDashboard() {
                     return (
                       <tr key={company.company_name} style={S.tableRow}>
                         <td style={S.td}><strong>{company.company_name}</strong></td>
-                        <td style={S.td}>{company.vacancy}</td>
                         <td style={S.td}>
                           <span style={{ ...S.statusBadge, backgroundColor: statusColor }}>
                             {status}
                           </span>
                         </td>
+                        <td style={S.td}>
+                          <select
+                            className="input-field"
+                            value={company.intent || "Pending"}
+                            onChange={(event) =>
+                              handleIntentChange(
+                                company.company_name,
+                                event.target.value as CandidateIntent
+                              )
+                            }
+                            disabled={savingIntentFor === company.company_name}
+                            style={S.intentSelect}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Not Interested">Not Interested</option>
+                            <option value="Will Attend">Will Attend</option>
+                          </select>
+                        </td>
+                        <td style={S.td}>{company.vacancy ?? 0}</td>
                       </tr>
                     );
                   })}
@@ -262,7 +280,7 @@ export default function CandidateDashboard() {
         <footer style={S.footer}>
           <div style={S.poweredBy}>
             <span style={S.poweredText}>POWERED BY</span>
-            <img src="/applywizz_logo.jpg" alt="ApplyWizz" style={S.poweredLogo} />
+            <Image src="/applywizz_logo.png" alt="ApplyWizz" width={140} height={40} style={S.poweredLogo} />
           </div>
         </footer>
       </div>
@@ -276,60 +294,6 @@ function ProfileItem({ label, value }: { label: string; value: string | number |
     <div style={S.appDetail}>
       <span style={S.detailLabel}>{label}</span>
       <span style={S.detailValue}>{displayValue}</span>
-    </div>
-  );
-}
-
-function StatCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
-  return (
-    <div className={`stat-card ${color}`}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: "1.3rem" }}>{icon}</span>
-        <div>
-          <div className="stat-value">{value}</div>
-          <div className="stat-label">{label}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ApplicationCard({ app, index }: { app: Application; index: number }) {
-  const level = matchLevel(app.match_percent);
-  return (
-    <div className="glass-card animate-fade-in-up" style={{ ...S.appCard, animationDelay: `${index * 0.06}s` }}>
-      <div style={S.appHeader}>
-        <div>
-          <h3 style={S.appRole}>{app.role}</h3>
-          <p style={S.appCompany}>{app.company_name}</p>
-        </div>
-        <span className={badgeClass(app.status)}>{app.status}</span>
-      </div>
-      <div style={S.appDetails}>
-        <div style={S.appDetail}>
-          <span style={S.detailLabel}>Category</span>
-          <span style={S.detailValue}>{app.category}</span>
-        </div>
-        <div style={S.appDetail}>
-          <span style={S.detailLabel}>Match</span>
-          <div className="match-meter">
-            <div className="match-bar" style={{ width: 80 }}>
-              <div className={`match-fill ${level}`} style={{ width: `${app.match_percent}%` }} />
-            </div>
-            <span className="match-value">{app.match_percent}%</span>
-          </div>
-        </div>
-        <div style={S.appDetail}>
-          <span style={S.detailLabel}>Success</span>
-          <span style={S.detailValue}>{app.success_probability}%</span>
-        </div>
-      </div>
-      {app.next_step && (
-        <div style={S.nextStep}>
-          <span style={S.nextStepIcon}>→</span>
-          <span style={S.nextStepText}>{app.next_step}</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -397,6 +361,13 @@ const S: Record<string, React.CSSProperties> = {
   tableRow: { borderBottom: "1px solid rgba(0,26,61,0.05)" },
   td: { padding: "16px 12px", fontSize: "0.95rem", color: "#001A3D" },
   statusBadge: { padding: "4px 10px", borderRadius: 6, fontSize: "0.7rem", fontWeight: 800, color: "#ffffff", textTransform: "uppercase" as const },
+  intentSelect: {
+    maxWidth: "170px",
+    minWidth: "150px",
+    padding: "8px 10px",
+    fontSize: "0.85rem",
+    borderRadius: "8px",
+  },
   routingNote: { fontSize: "0.75rem", color: "#64748b", marginTop: 16, fontStyle: "italic" as const },
   
   priorityCard: { padding: "16px 20px" },

@@ -42,19 +42,6 @@ export interface Candidate {
   created_at: string;
 }
 
-export interface CompanyAllocation {
-  company_name: string;
-  sector: string;
-  vacancy: number;
-  assigned_count: number;
-  remaining: number;
-}
-
-export interface RoutingResult {
-  assigned_sector: string;
-  companies: CompanyAllocation[];
-}
-
 export interface Application {
   id: number;
   candidate_id: string;
@@ -77,6 +64,42 @@ export interface CandidateWithApplications extends Candidate {
   applications: Application[];
 }
 
+export interface HrCandidatePreview {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  gender: string | null;
+  village: string | null;
+  mandal: string | null;
+  district: string | null;
+  education_qualification: string | null;
+}
+
+export interface HrAllocatedCandidatePreview extends HrCandidatePreview {
+  allocated_company_name: string;
+  intent: CandidateIntent;
+  company_decision: CompanyDecision | null;
+}
+
+export interface RoutingCompany {
+  company_name: string;
+  sector?: string | null;
+  education?: string | null;
+  vacancy?: number | null;
+  assigned_count?: number | null;
+  remaining?: number | null;
+  intent?: CandidateIntent;
+}
+
+export interface RoutingResult {
+  assigned_sector: string;
+  companies: RoutingCompany[];
+}
+
+export type CandidateIntent = 'Pending' | 'Not Interested' | 'Will Attend';
+export type CompanyDecision = 'No Show' | 'Not Selected' | 'Selected';
+
 // ── Intelligence Types ───────────────────────────────────────
 
 export interface IntelligenceSummary {
@@ -98,6 +121,28 @@ export interface Job {
   education: string;
   sector: string;
   created_at: string;
+}
+
+export interface CompanyDirectoryRow {
+  company_name: string;
+  sector?: string | null;
+  education?: string | null;
+  vacancy?: number | null;
+  assigned_count?: number | null;
+  no_show_count?: number;
+  not_selected_count?: number;
+  selected_count?: number;
+}
+
+function normalizeNumberValue(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+  const cleaned = String(value).replace(/,/g, '').trim();
+  if (!cleaned) return null;
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 // ── API Functions ────────────────────────────────────────────
@@ -155,45 +200,456 @@ export async function getAllCandidates(): Promise<Candidate[]> {
   return data || [];
 }
 
+export type CompanyLoginResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid_credentials' | 'no_visible_company_rows' };
+
+export type AdminLoginResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid_credentials' | 'admin_table_unreadable' };
+
+function normalizeCredentialValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value).trim();
+}
+
+function getCredentialFromRow(
+  row: Record<string, unknown>,
+  target: 'email' | 'password'
+): string {
+  const normalizedTarget = target.toLowerCase();
+  const keys = Object.keys(row);
+  const key = keys.find((candidateKey) => {
+    const simplified = candidateKey.toLowerCase().replace(/[^a-z]/g, '');
+    return simplified === normalizedTarget;
+  });
+
+  if (!key) {
+    return '';
+  }
+  return normalizeCredentialValue(row[key]);
+}
+
+export async function validateCompanyLogin(email: string, password: string): Promise<CompanyLoginResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPassword = password.trim();
+
+  if (!normalizedEmail || !normalizedPassword) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  // Preferred path: secure RPC that checks credentials server-side without exposing table rows.
+  const { data: rpcData, error: rpcError } = await supabase.rpc('verify_company_login', {
+    p_email: normalizedEmail,
+    p_password: normalizedPassword,
+  });
+
+  if (!rpcError) {
+    if (rpcData === true) {
+      return { ok: true };
+    }
+    if (rpcData === false) {
+      return { ok: false, reason: 'invalid_credentials' };
+    }
+  }
+
+  const tableNames = ['Company_details', 'company_details'];
+  let visibleRows: Record<string, unknown>[] = [];
+
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase.from(tableName).select('*').limit(200);
+    if (!error && data && data.length > 0) {
+      visibleRows = data as Record<string, unknown>[];
+      break;
+    }
+  }
+
+  if (visibleRows.length === 0) {
+    return { ok: false, reason: 'no_visible_company_rows' };
+  }
+
+  const found = visibleRows.some((row) => {
+    const rowEmail = getCredentialFromRow(row, 'email').toLowerCase();
+    const rowPassword = getCredentialFromRow(row, 'password');
+    return rowEmail === normalizedEmail && rowPassword === normalizedPassword;
+  });
+
+  if (!found) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  return { ok: true };
+}
+
+export async function validateAdminLogin(
+  email: string,
+  password: string
+): Promise<AdminLoginResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPassword = password.trim();
+
+  if (!normalizedEmail || !normalizedPassword) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('email')
+    .ilike('email', normalizedEmail)
+    .eq('password', normalizedPassword)
+    .limit(1);
+
+  if (error) {
+    return { ok: false, reason: 'admin_table_unreadable' };
+  }
+
+  if (!data || data.length === 0) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
+
+  return { ok: true };
+}
+
+export async function getHrCandidatesPreview(limit = 3): Promise<HrCandidatePreview[]> {
+  const { data, error } = await supabase
+    .from('candidates')
+    .select('id, name, email, phone, gender, village, mandal, district, education_qualification')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return [];
+  }
+
+  return (data || []) as HrCandidatePreview[];
+}
+
+export async function getHrAllocatedCandidatesByEmail(
+  email: string
+): Promise<HrAllocatedCandidatePreview[]> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return [];
+
+  const tableNames = ['Company_details', 'company_details'];
+  let companyNames: string[] = [];
+
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('company_name')
+      .ilike('email', normalizedEmail);
+
+    if (!error && data && data.length > 0) {
+      companyNames = data
+        .map((row) => String(row.company_name || '').trim())
+        .filter(Boolean);
+      if (companyNames.length > 0) break;
+    }
+  }
+
+  if (companyNames.length === 0) {
+    return [];
+  }
+
+  const { data: allocations, error: allocationError } = await supabase
+    .from('candidate_allocations')
+    .select('candidate_id, company_name, intent, company_decision')
+    .in('company_name', companyNames);
+
+  if (allocationError || !allocations || allocations.length === 0) {
+    return [];
+  }
+
+  const candidateIds = Array.from(
+    new Set(
+      allocations
+        .map((row) => String(row.candidate_id || '').trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (candidateIds.length === 0) {
+    return [];
+  }
+
+  const { data: candidates, error: candidateError } = await supabase
+    .from('candidates')
+    .select('id, name, email, phone, gender, village, mandal, district, education_qualification')
+    .in('id', candidateIds);
+
+  if (candidateError || !candidates || candidates.length === 0) {
+    return [];
+  }
+
+  const candidateMap = new Map<string, HrCandidatePreview>();
+  (candidates as HrCandidatePreview[]).forEach((candidate) => {
+    candidateMap.set(candidate.id, candidate);
+  });
+
+  const rows: HrAllocatedCandidatePreview[] = [];
+  allocations.forEach((allocation) => {
+    const candidateId = String(allocation.candidate_id || '').trim();
+    const candidate = candidateMap.get(candidateId);
+    if (!candidate) return;
+
+    const rawIntent = String(allocation.intent || '').trim().toLowerCase();
+    let normalizedIntent: CandidateIntent = 'Pending';
+    if (rawIntent === 'not interested') normalizedIntent = 'Not Interested';
+    if (rawIntent === 'will attend') normalizedIntent = 'Will Attend';
+
+    const rawDecision = String(allocation.company_decision || '').trim().toLowerCase();
+    let normalizedDecision: CompanyDecision | null = null;
+    if (rawDecision === 'no show') normalizedDecision = 'No Show';
+    if (rawDecision === 'not selected') normalizedDecision = 'Not Selected';
+    if (rawDecision === 'selected') normalizedDecision = 'Selected';
+
+    rows.push({
+      ...candidate,
+      allocated_company_name: String(allocation.company_name || '').trim(),
+      intent: normalizedIntent,
+      company_decision: normalizedDecision,
+    });
+  });
+
+  return rows;
+}
+
+function inferSectorForCandidate(candidate: Candidate): string {
+  const education = (candidate.education_qualification || '').toUpperCase();
+  const preference = (candidate.preferred_sector || '').toLowerCase();
+
+  if (education.includes('SSC') || education.includes('10TH')) {
+    return 'Manufacturing / Logistics';
+  }
+  if (
+    education.includes('B.TECH') ||
+    education.includes('BTECH') ||
+    education.includes('ENGINEERING')
+  ) {
+    return 'IT / Software';
+  }
+  if (education.includes('DEGREE') || education.includes('GRADUATE')) {
+    if (preference.includes('it')) return 'IT / Software';
+    if (preference.includes('healthcare')) return 'Healthcare';
+    return 'Manufacturing / Logistics';
+  }
+
+  return 'Hospitality & Support';
+}
+
+function scoreByEducation(
+  candidateEducation: string,
+  companyEducation: string
+): number {
+  if (!candidateEducation || !companyEducation) return 0;
+  if (candidateEducation === companyEducation) return 100;
+  if (candidateEducation.includes('B.TECH') && companyEducation.includes('DEGREE')) return 50;
+  return 0;
+}
+
+export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
+  const assigned_sector = inferSectorForCandidate(candidate);
+
+  const tableNames = ['Company_details', 'company_details'];
+  let rows: Record<string, unknown>[] = [];
+
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase.from(tableName).select('*');
+    if (!error && data && data.length > 0) {
+      rows = data as Record<string, unknown>[];
+      break;
+    }
+  }
+
+  const education = (candidate.education_qualification || '').toUpperCase();
+  const { data: allocationRows } = await supabase
+    .from('candidate_allocations')
+    .select('company_name, intent')
+    .eq('candidate_id', candidate.id);
+
+  const intentMap = new Map<string, CandidateIntent>();
+  (allocationRows || []).forEach((row) => {
+    const company = String(row.company_name || '').trim().toLowerCase();
+    if (!company) return;
+
+    const rawIntent = String(row.intent || '').trim().toLowerCase();
+    let normalized: CandidateIntent = 'Pending';
+    if (rawIntent === 'not interested') normalized = 'Not Interested';
+    if (rawIntent === 'will attend') normalized = 'Will Attend';
+
+    intentMap.set(company, normalized);
+  });
+
+  const companies = rows
+    .map((row) => {
+      const company_name = String(row.company_name || row.company || '').trim();
+      const sector = String(row.sector || '').trim();
+      const companyEdu = String(row.education || '').toUpperCase().trim();
+      const vacancy = Number(row.vacancy || 0);
+      const assigned_count = Number(row.assigned_count || 0);
+      const eduScore = scoreByEducation(education, companyEdu);
+      const available = vacancy - assigned_count;
+
+      return {
+        company_name,
+        sector,
+        education: companyEdu,
+        vacancy,
+        assigned_count,
+        eduScore,
+        available,
+      };
+    })
+    .filter((company) => company.company_name && company.sector === assigned_sector)
+    .sort((a, b) => {
+      if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
+      return b.available - a.available;
+    })
+    .slice(0, 5)
+    .map((c) => ({
+      company_name: c.company_name,
+      sector: c.sector,
+      education: c.education,
+      vacancy: c.vacancy,
+      assigned_count: c.assigned_count,
+      intent: intentMap.get(c.company_name.toLowerCase()) || 'Pending',
+    }));
+
+  return { assigned_sector, companies };
+}
+
+export async function updateCandidateAllocationIntent(
+  candidateId: string,
+  companyName: string,
+  intent: CandidateIntent
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('candidate_allocations')
+    .update({ intent })
+    .eq('candidate_id', candidateId)
+    .eq('company_name', companyName)
+    .select('candidate_id')
+    .limit(1);
+
+  if (error) return false;
+  return Boolean(data && data.length > 0);
+}
+
+export async function updateCandidateAllocationDecision(
+  candidateId: string,
+  companyName: string,
+  decision: CompanyDecision | null
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('candidate_allocations')
+    .update({ company_decision: decision })
+    .eq('candidate_id', candidateId)
+    .eq('company_name', companyName)
+    .select('candidate_id')
+    .limit(1);
+
+  if (error) return false;
+  return Boolean(data && data.length > 0);
+}
+
 export async function getAdminStats() {
-  const { data: candidates } = await supabase.from('candidates').select('id');
-  const { data: applications } = await supabase.from('applications').select('*');
+  const { count: candidateCount } = await supabase
+    .from('candidates')
+    .select('id', { count: 'exact', head: true });
+
+  // Primary source: legacy applications table
+  const { data: applications, count: applicationCount, error: applicationError } = await supabase
+    .from('applications')
+    .select('candidate_id, status, category', { count: 'exact' });
 
   const apps = applications || [];
-  const totalCandidates = candidates?.length || 0;
-  const totalApplications = apps.length;
+  const hasReadableApplications = !applicationError && apps.length > 0;
 
-  const statusBreakdown: Record<string, number> = {};
-  const categoryBreakdown: Record<string, number> = {};
-  
-  apps.forEach(a => {
-    statusBreakdown[a.status] = (statusBreakdown[a.status] || 0) + 1;
-    if (a.category) {
-      categoryBreakdown[a.category] = (categoryBreakdown[a.category] || 0) + 1;
+  let totalApplications = applicationCount || 0;
+  let statusBreakdown: Record<string, number> = {};
+  let categoryBreakdown: Record<string, number> = {};
+  let multiPipeline = 0;
+
+  if (hasReadableApplications) {
+    apps.forEach((app) => {
+      statusBreakdown[app.status] = (statusBreakdown[app.status] || 0) + 1;
+      if (app.category) {
+        categoryBreakdown[app.category] = (categoryBreakdown[app.category] || 0) + 1;
+      }
+    });
+
+    const candidateApps: Record<string, number> = {};
+    apps.forEach((app) => {
+      candidateApps[app.candidate_id] = (candidateApps[app.candidate_id] || 0) + 1;
+    });
+    multiPipeline = Object.values(candidateApps).filter((count) => count > 1).length;
+    categoryBreakdown.Pending = 0;
+  } else {
+    // Fallback source: candidate_allocations (current workflow table)
+    const { count: allocationCount } = await supabase
+      .from('candidate_allocations')
+      .select('candidate_id', { count: 'exact', head: true });
+    totalApplications = allocationCount || 0;
+
+    const candidateAllocations: Record<string, number> = {};
+    const intentBreakdown: Record<string, number> = {};
+    const decisionBreakdown: Record<string, number> = {};
+    let pendingDecisionCount = 0;
+    const willAttendCandidates = new Set<string>();
+
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: allocationRows, error: allocationError } = await supabase
+        .from('candidate_allocations')
+        .select('candidate_id, intent, company_decision')
+        .range(offset, offset + pageSize - 1);
+
+      if (allocationError || !allocationRows || allocationRows.length === 0) {
+        break;
+      }
+
+      allocationRows.forEach((row) => {
+        const candidateId = String(row.candidate_id || '').trim();
+        if (!candidateId) return;
+
+        candidateAllocations[candidateId] = (candidateAllocations[candidateId] || 0) + 1;
+
+        const intent = String(row.intent || 'Pending').trim() || 'Pending';
+        intentBreakdown[intent] = (intentBreakdown[intent] || 0) + 1;
+        if (intent.toLowerCase() === 'will attend') {
+          willAttendCandidates.add(candidateId);
+        }
+
+        const decision = String(row.company_decision || '').trim();
+        if (decision) {
+          decisionBreakdown[decision] = (decisionBreakdown[decision] || 0) + 1;
+        } else {
+          pendingDecisionCount += 1;
+        }
+      });
+
+      if (allocationRows.length < pageSize) {
+        break;
+      }
+      offset += pageSize;
     }
-  });
 
-  // Multi-pipeline candidates
-  const candidateApps: Record<string, number> = {};
-  apps.forEach(a => {
-    candidateApps[a.candidate_id] = (candidateApps[a.candidate_id] || 0) + 1;
-  });
-  const multiPipeline = Object.values(candidateApps).filter(c => c > 1).length;
-
-  // Top candidates by match
-  const candidateBestMatch: Record<string, { name: string; match: number; apps: number }> = {};
-  apps.forEach(a => {
-    if (!candidateBestMatch[a.candidate_id] || a.match_percent > candidateBestMatch[a.candidate_id].match) {
-      candidateBestMatch[a.candidate_id] = {
-        name: '',
-        match: a.match_percent,
-        apps: candidateApps[a.candidate_id],
-      };
-    }
-  });
+    multiPipeline = Object.values(candidateAllocations).filter((count) => count > 1).length;
+    statusBreakdown = {
+      ...intentBreakdown,
+      'Interview Scheduled': willAttendCandidates.size,
+    };
+    categoryBreakdown = {
+      ...decisionBreakdown,
+      Pending: pendingDecisionCount,
+    };
+  }
 
   return {
-    totalCandidates,
+    totalCandidates: candidateCount || 0,
     totalApplications,
     statusBreakdown,
     categoryBreakdown,
@@ -229,6 +685,67 @@ export async function getAllJobs(): Promise<Job[]> {
 
   if (error) return [];
   return data || [];
+}
+
+export async function getAllCompanies(): Promise<CompanyDirectoryRow[]> {
+  const tableNames = ['Company_details', 'company_details'];
+
+  const { data: allocationRows } = await supabase
+    .from('candidate_allocations')
+    .select('company_name, company_decision');
+
+  const liveAssignedCount = new Map<string, number>();
+  const decisionBreakdown = new Map<
+    string,
+    { noShow: number; notSelected: number; selected: number }
+  >();
+  (allocationRows || []).forEach((row) => {
+    const companyKey = String(row.company_name || '').trim().toLowerCase();
+    if (!companyKey) return;
+    liveAssignedCount.set(companyKey, (liveAssignedCount.get(companyKey) || 0) + 1);
+
+    const existing = decisionBreakdown.get(companyKey) || {
+      noShow: 0,
+      notSelected: 0,
+      selected: 0,
+    };
+
+    const decision = String(row.company_decision || '').trim().toLowerCase();
+    if (decision === 'no show') existing.noShow += 1;
+    if (decision === 'not selected') existing.notSelected += 1;
+    if (decision === 'selected') existing.selected += 1;
+
+    decisionBreakdown.set(companyKey, existing);
+  });
+
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('company_name, sector, education, vacancy, assigned_count, email')
+      .order('company_name', { ascending: true });
+
+    if (!error && data) {
+      return (data as Record<string, unknown>[]).map((row) => ({
+        company_name: String(row.company_name || '').trim(),
+        sector: row.sector ? String(row.sector) : null,
+        education: row.education ? String(row.education) : null,
+        vacancy: normalizeNumberValue(row.vacancy),
+        assigned_count:
+          liveAssignedCount.get(String(row.company_name || '').trim().toLowerCase()) || 0,
+        no_show_count:
+          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
+            ?.noShow || 0,
+        not_selected_count:
+          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
+            ?.notSelected || 0,
+        selected_count:
+          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
+            ?.selected || 0,
+      }));
+    }
+  }
+
+  return [];
 }
 
 // ── Excel Upload & Dedup Logic ───────────────────────────────
@@ -434,141 +951,3 @@ export function computeIntelligence(applications: Application[]): IntelligenceSu
   };
 }
 
-// ── Routing Engine ──────────────────────────────────────────
-
-export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
-  // 1. Check if the candidate already has an allocation in the permanent log
-  const { data: existingAllocations, error: allocError } = await supabase
-    .from('candidate_allocations')
-    .select('company_name, sector')
-    .eq('candidate_id', candidate.id);
-
-  if (existingAllocations && existingAllocations.length > 0) {
-    // If they already have an assignment, fetch the full details for those companies
-    const companyNames = existingAllocations.map(a => a.company_name);
-    const { data: companyDetails } = await supabase
-      .from('Company_details')
-      .select('*')
-      .in('company_name', companyNames);
-
-    if (companyDetails && companyDetails.length > 0) {
-      return {
-        assigned_sector: existingAllocations[0].sector,
-        companies: companyDetails.map(c => ({
-          ...c,
-          remaining: c.vacancy - (c.assigned_count || 0)
-        }))
-      };
-    }
-  }
-
-  // 2. No existing allocation, run the routing logic
-  const education = (candidate.education_qualification || '').toUpperCase();
-  const preference = (candidate.preferred_sector || '').toLowerCase();
-  
-  let assigned_sector = 'Hospitality & Support'; // Default
-
-  // Sector Assignment Logic
-  if (education.includes('SSC') || education.includes('10TH')) {
-    assigned_sector = 'Manufacturing / Logistics';
-  } else if (education.includes('B.TECH') || education.includes('BTECH') || education.includes('ENGINEERING')) {
-    assigned_sector = 'IT / Software';
-  } else if (education.includes('DEGREE') || education.includes('GRADUATE')) {
-    if (preference.includes('it') || preference.includes('software')) {
-      assigned_sector = 'IT / Software';
-    } else if (preference.includes('pharma') || preference.includes('healthcare') || preference.includes('medical')) {
-      assigned_sector = 'Healthcare';
-    } else {
-      assigned_sector = 'Manufacturing / Logistics';
-    }
-  } else if (preference.includes('it')) {
-    assigned_sector = 'IT / Software';
-  } else if (preference.includes('manufacturing')) {
-    assigned_sector = 'Manufacturing / Logistics';
-  }
-
-  // Fetch companies in the sector
-  const { data: companies, error } = await supabase
-    .from('Company_details')
-    .select('*')
-    .eq('sector', assigned_sector)
-    .gt('vacancy', 0);
-
-  if (error || !companies) {
-    return { assigned_sector, companies: [] };
-  }
-
-  // STEP 3: STRICT EDUCATION FILTER
-  const filteredCompanies = companies.filter(c => {
-    const compEdu = (c.education || '').toUpperCase();
-    const candEdu = education; // From line 466
-
-    if (candEdu.includes('B.TECH') || candEdu.includes('BTECH')) {
-      return compEdu.includes('B.TECH') || compEdu.includes('BTECH') || compEdu.includes('ENGINEERING');
-    }
-    if (candEdu.includes('DEGREE') || candEdu.includes('GRADUATE')) {
-      return compEdu.includes('DEGREE') || compEdu.includes('GRADUATE');
-    }
-    if (candEdu.includes('SSC') || candEdu.includes('10TH')) {
-      return compEdu.includes('SSC') || compEdu.includes('10TH');
-    }
-    return true; // Fallback for other cases
-  });
-
-  // If strict filtering returns nothing, show all in sector so they don't see an empty screen
-  const finalSource = filteredCompanies.length > 0 ? filteredCompanies : companies;
-
-  const processedCompanies = finalSource
-    .map(c => {
-      // Calculate Education Alignment Score
-      let eduScore = 0;
-      const compEdu = (c.education || '').toUpperCase();
-      const candEdu = education; // Candidate's education from line 466
-
-      if (candEdu === compEdu) {
-        eduScore = 100; // Perfect match
-      } else if (candEdu.includes('B.TECH') && (compEdu.includes('DEGREE') || compEdu.includes('ANY'))) {
-        eduScore = 50; // Over-qualified
-      } else if (candEdu.includes('DEGREE') && compEdu.includes('SSC')) {
-        eduScore = 50; // Over-qualified
-      }
-
-      return {
-        ...c,
-        eduScore,
-        remaining: c.vacancy - (c.assigned_count || 0)
-      };
-    })
-    .sort((a, b) => {
-      // Primary sort: Education Alignment
-      if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
-      // Secondary sort: Remaining Vacancy
-      return b.remaining - a.remaining;
-    })
-    .slice(0, 5);
-
-  // 3. PERSIST THE ALLOCATION (Log it permanently)
-  if (processedCompanies.length > 0) {
-    const allocationsToInsert = processedCompanies.map(c => ({
-      candidate_id: candidate.id,
-      company_name: c.company_name,
-      sector: assigned_sector
-    }));
-
-    // Log the companies shown to the candidate
-    await supabase.from('candidate_allocations').insert(allocationsToInsert);
-
-    // Increment assigned_count for the primary (top) company
-    const topCompany = processedCompanies[0];
-    await supabase.from('Company_details')
-      .update({ assigned_count: (topCompany.assigned_count || 0) + 1 })
-      .eq('company_name', topCompany.company_name);
-    
-    // Update candidate tracking record
-    await supabase.from('candidates')
-      .update({ assigned_sector, viewed_at: new Date().toISOString() })
-      .eq('id', candidate.id);
-  }
-
-  return { assigned_sector, companies: processedCompanies };
-}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -19,10 +20,13 @@ export default function Home() {
       <main style={styles.main}>
         {/* Official Banner */}
         <div className="animate-fade-in" style={styles.bannerWrap}>
-          <img 
-            src="/banner.png" 
-            alt="Siddipet Police Udyoga Mitra 2026" 
-            style={styles.bannerImg} 
+          <Image
+            src="/banner.png"
+            alt="Siddipet Police Udyoga Mitra 2026"
+            width={1200}
+            height={320}
+            priority
+            style={{ ...styles.bannerImg, height: "auto" }}
           />
         </div>
 
@@ -73,6 +77,38 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="animate-fade-in-up stagger-3" style={styles.loginRow}>
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Company HR Teams</h2>
+            <p style={styles.hrSub}>
+              Login to review shortlisted candidates and hiring data.
+            </p>
+            <button
+              className="btn-primary"
+              onClick={() => router.push("/hr/login")}
+              style={styles.hrBtn}
+              id="hr-login-btn"
+            >
+              HR Login
+            </button>
+          </div>
+
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Admin Team</h2>
+            <p style={styles.hrSub}>
+              Login to access admin analytics and candidate controls.
+            </p>
+            <button
+              className="btn-primary"
+              onClick={() => router.push("/admin/login")}
+              style={styles.hrBtn}
+              id="admin-login-btn"
+            >
+              Admin Login
+            </button>
+          </div>
+        </div>
+
 
 
         {/* Footer */}
@@ -82,7 +118,7 @@ export default function Home() {
           </p>
           <div style={styles.poweredBy}>
             <span style={styles.poweredText}>POWERED BY</span>
-            <img src="/applywizz_logo.jpg" alt="ApplyWizz" style={styles.poweredLogo} />
+            <Image src="/applywizz_logo.jpg" alt="ApplyWizz" width={140} height={40} style={styles.poweredLogo} />
           </div>
         </footer>
       </main>
@@ -185,11 +221,6 @@ const styles: Record<string, React.CSSProperties> = {
   headingAccent: {
     color: "#E31E24",
   },
-  footerText: {
-    fontSize: "0.8rem",
-    color: "#64748b",
-    fontWeight: 500,
-  },
   poweredBy: {
     display: "flex",
     alignItems: "center",
@@ -241,6 +272,35 @@ const styles: Record<string, React.CSSProperties> = {
   lookupBtn: {
     whiteSpace: "nowrap" as const,
     minWidth: "160px",
+  },
+  hrCard: {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: "16px",
+    padding: "28px 32px",
+    textAlign: "center",
+    flex: 1,
+    minWidth: "280px",
+  },
+  loginRow: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "stretch",
+    flexWrap: "wrap",
+  },
+  hrTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 800,
+    color: "#001A3D",
+    marginBottom: "8px",
+  },
+  hrSub: {
+    fontSize: "0.95rem",
+    color: "#64748b",
+    marginBottom: "18px",
+  },
+  hrBtn: {
+    minWidth: "180px",
   },
   resultLabel: {
     fontSize: "0.7rem",

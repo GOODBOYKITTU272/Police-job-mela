@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local utility and migration scripts (not shipped in app runtime):
+    "scratch/**",
+    "scripts/**",
+    "src/scripts/**",
   ]),
 ]);
 
