@@ -468,7 +468,7 @@ function scoreByEducation(
 }
 
 export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
-  const assigned_sector = inferSectorForCandidate(candidate);
+  const fallbackAssignedSector = inferSectorForCandidate(candidate);
 
   const tableNames = ['Company_details', 'company_details'];
   let rows: Record<string, unknown>[] = [];
@@ -484,10 +484,13 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
   const education = (candidate.education_qualification || '').toUpperCase();
   const { data: allocationRows } = await supabase
     .from('candidate_allocations')
-    .select('company_name, intent')
-    .eq('candidate_id', candidate.id);
+    .select('company_name, intent, sector, allocated_at')
+    .eq('candidate_id', candidate.id)
+    .order('allocated_at', { ascending: true });
 
   const intentMap = new Map<string, CandidateIntent>();
+  const allocationOrder: string[] = [];
+  let assignedSectorFromAllocations = '';
   (allocationRows || []).forEach((row) => {
     const company = String(row.company_name || '').trim().toLowerCase();
     if (!company) return;
@@ -498,9 +501,17 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
     if (rawIntent === 'will attend') normalized = 'Will Attend';
 
     intentMap.set(company, normalized);
+
+    if (!allocationOrder.includes(company)) {
+      allocationOrder.push(company);
+    }
+
+    if (!assignedSectorFromAllocations) {
+      assignedSectorFromAllocations = String(row.sector || '').trim();
+    }
   });
 
-  const companies = rows
+  const companyDirectoryRows = rows
     .map((row) => {
       const company_name = String(row.company_name || row.company || '').trim();
       const sector = String(row.sector || '').trim();
@@ -519,8 +530,50 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
         eduScore,
         available,
       };
-    })
-    .filter((company) => company.company_name && company.sector === assigned_sector)
+    });
+
+  // Primary path: show companies allocated to this exact candidate_id.
+  if (allocationOrder.length > 0) {
+    const companyByKey = new Map(
+      companyDirectoryRows.map((row) => [row.company_name.toLowerCase(), row] as const)
+    );
+
+    const companies = allocationOrder
+      .map((companyKey) => {
+        const matched = companyByKey.get(companyKey);
+        if (matched) {
+          return {
+            company_name: matched.company_name,
+            sector: matched.sector,
+            education: matched.education,
+            vacancy: matched.vacancy,
+            assigned_count: matched.assigned_count,
+            intent: intentMap.get(companyKey) || 'Pending',
+          };
+        }
+
+        // If a company is present in allocations but missing from Company_details,
+        // still show it so candidate-specific routing remains accurate.
+        return {
+          company_name: companyKey,
+          sector: assignedSectorFromAllocations || fallbackAssignedSector,
+          education: null,
+          vacancy: 0,
+          assigned_count: 0,
+          intent: intentMap.get(companyKey) || 'Pending',
+        };
+      })
+      .slice(0, 5);
+
+    return {
+      assigned_sector: assignedSectorFromAllocations || fallbackAssignedSector,
+      companies,
+    };
+  }
+
+  // Fallback path: infer by education + sector when no allocations exist yet.
+  const companies = companyDirectoryRows
+    .filter((company) => company.company_name && company.sector === fallbackAssignedSector)
     .sort((a, b) => {
       if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
       return b.available - a.available;
@@ -535,7 +588,7 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
       intent: intentMap.get(c.company_name.toLowerCase()) || 'Pending',
     }));
 
-  return { assigned_sector, companies };
+  return { assigned_sector: fallbackAssignedSector, companies };
 }
 
 export async function updateCandidateAllocationIntent(
