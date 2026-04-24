@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
+import ApplyWizzFooter from "./components/ApplyWizzFooter";
 
 export default function Home() {
   const router = useRouter();
@@ -17,10 +17,10 @@ export default function Home() {
   };
 
   return (
-    <div className="home-page-shell" style={styles.page}>
-      <main className="home-main" style={styles.main}>
+    <div style={styles.page}>
+      <main style={styles.main}>
         {/* Official Banner */}
-        <div className="home-banner animate-fade-in" style={styles.bannerWrap}>
+        <div className="animate-fade-in" style={styles.bannerWrap}>
           <Image
             src="/banner.png"
             alt="Siddipet Police Udyoga Mitra 2026"
@@ -32,23 +32,23 @@ export default function Home() {
         </div>
 
         {/* Hero */}
-        <div className="home-hero animate-fade-in-up" style={styles.hero}>
-          <div className="home-brand-badge" style={styles.brandBadge}>
+        <div className="animate-fade-in-up" style={styles.hero}>
+          <div style={styles.brandBadge}>
             <span style={styles.brandIcon}>🚔</span>
             Siddipet Police
           </div>
-          <h1 className="home-heading" style={styles.heading}>
+          <h1 style={styles.heading}>
             POLICE UDYOGA <span style={styles.headingAccent}>MITRA</span>
             <br />
             Job Portal
           </h1>
-          <p className="home-subheading" style={styles.subheading}>
+          <p style={styles.subheading}>
             Official Recruitment Portal launched on 23/04/2026. Track every application and get real-time status intelligence.
           </p>
         </div>
 
         <div
-          className="home-lookup-card animate-fade-in-up stagger-2"
+          className="animate-fade-in-up stagger-2"
           style={styles.lookupCard}
         >
           <h2 style={styles.cardTitle}>🔍 Candidate Status Lookup</h2>
@@ -67,7 +67,7 @@ export default function Home() {
               id="cid-input"
             />
             <button
-              className="btn-primary home-lookup-btn"
+              className="btn-primary"
               onClick={handleLookup}
               style={styles.lookupBtn}
               disabled={!cid.trim()}
@@ -78,14 +78,14 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="home-login-row animate-fade-in-up stagger-3" style={styles.loginRow}>
-          <div className="home-login-card" style={styles.hrCard}>
-            <h2 className="home-login-title" style={styles.hrTitle}>For Company HR Teams</h2>
-            <p className="home-login-sub" style={styles.hrSub}>
+        <div className="animate-fade-in-up stagger-3 home-login-row" style={styles.loginRow}>
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Company HR Teams</h2>
+            <p style={styles.hrSub}>
               Login to review shortlisted candidates and hiring data.
             </p>
             <button
-              className="btn-primary home-login-btn"
+              className="btn-primary"
               onClick={() => router.push("/hr/login")}
               style={styles.hrBtn}
               id="hr-login-btn"
@@ -94,13 +94,13 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="home-login-card" style={styles.hrCard}>
-            <h2 className="home-login-title" style={styles.hrTitle}>For Admin Team</h2>
-            <p className="home-login-sub" style={styles.hrSub}>
+          <div style={styles.hrCard}>
+            <h2 style={styles.hrTitle}>For Admin Team</h2>
+            <p style={styles.hrSub}>
               Login to access admin analytics and candidate controls.
             </p>
             <button
-              className="btn-primary home-login-btn"
+              className="btn-primary"
               onClick={() => router.push("/admin/login")}
               style={styles.hrBtn}
               id="admin-login-btn"
@@ -112,7 +112,7 @@ export default function Home() {
 
 
 
-        <ApplyWizzFooter />
+        <ApplyWizzFooter style={styles.footer} />
       </main>
     </div>
   );
@@ -213,23 +213,6 @@ const styles: Record<string, React.CSSProperties> = {
   headingAccent: {
     color: "#E31E24",
   },
-  poweredBy: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    marginTop: "16px",
-  },
-  poweredText: {
-    fontSize: "0.65rem",
-    fontWeight: 800,
-    color: "#475569",
-    letterSpacing: "0.1em",
-  },
-  poweredLogo: {
-    height: "32px",
-    width: "auto",
-  },
   subheading: {
     fontSize: "1.1rem",
     color: "#475569",
@@ -310,10 +293,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     textAlign: "center" as const,
-    paddingTop: "20px",
-  },
-  footerText: {
-    fontSize: "0.75rem",
-    color: "#475569",
+    paddingTop: "0",
   },
 };

@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 import { validateAdminLogin } from "@/lib/supabase";
 
 export default function AdminLoginPage() {
@@ -41,8 +41,8 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="auth-page-shell" style={styles.page}>
-      <main style={styles.main} className="auth-card glass-card">
+    <div style={styles.page}>
+      <main style={styles.main} className="glass-card">
         <div style={styles.topActions}>
           <button
             type="button"
@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
             {loading ? "Checking..." : "Login"}
           </button>
         </form>
-        <ApplyWizzFooter />
+        <ApplyWizzFooter style={styles.footer} />
       </main>
     </div>
   );
@@ -185,5 +185,8 @@ const styles: Record<string, CSSProperties> = {
   submitBtn: {
     marginTop: "10px",
     width: "100%",
+  },
+  footer: {
+    marginTop: "20px",
   },
 };

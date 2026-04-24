@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import {
   getAdminStats,
   getAllCandidates,
@@ -10,6 +9,7 @@ import {
   Candidate,
   CompanyDirectoryRow,
 } from "@/lib/supabase";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 
 function AdminDashboard() {
   const router = useRouter();
@@ -280,7 +280,7 @@ function AdminDashboard() {
               placeholder={
                 directoryView === "companies"
                   ? "Search by Company, Sector, Education, Vacancy, or Counts..."
-                  : "Search by Name, CID, or Email..."
+                  : "Search by Name, CID, Email, or Phone..."
               }
               value={search}
               onChange={(e) => {

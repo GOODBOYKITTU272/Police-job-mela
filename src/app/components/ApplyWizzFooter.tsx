@@ -1,24 +1,38 @@
 "use client";
 
 import Image from "next/image";
+import type { CSSProperties } from "react";
 
-export const APPLYWIZZ_WEBSITE_URL = "https://www.applywizz.ai/";
+type ApplyWizzFooterProps = {
+  style?: CSSProperties;
+  logoHeight?: number;
+};
 
-export function ApplyWizzFooter() {
+export default function ApplyWizzFooter({ style, logoHeight = 32 }: ApplyWizzFooterProps) {
   return (
-    <footer className="applywizz-footer" aria-label="ApplyWizz">
+    <footer
+      style={{
+        marginTop: "24px",
+        paddingTop: "16px",
+        borderTop: "1px solid rgba(0,26,61,0.08)",
+        display: "flex",
+        justifyContent: "center",
+        ...style,
+      }}
+    >
       <a
-        href={APPLYWIZZ_WEBSITE_URL}
+        href="https://www.applywizz.ai/"
         target="_blank"
         rel="noopener noreferrer"
-        className="applywizz-footer-link"
+        aria-label="ApplyWizz website"
+        style={{ display: "inline-flex", alignItems: "center" }}
       >
         <Image
           src="/logo_Applywizz.png"
           alt="ApplyWizz"
-          width={160}
-          height={48}
-          className="applywizz-footer-logo"
+          width={150}
+          height={logoHeight}
+          style={{ width: "auto", height: `${logoHeight}px` }}
         />
       </a>
     </footer>
