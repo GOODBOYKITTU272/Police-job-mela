@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 
 export default function Home() {
   const router = useRouter();
@@ -16,10 +17,10 @@ export default function Home() {
   };
 
   return (
-    <div style={styles.page}>
-      <main style={styles.main}>
+    <div className="home-page-shell" style={styles.page}>
+      <main className="home-main" style={styles.main}>
         {/* Official Banner */}
-        <div className="animate-fade-in" style={styles.bannerWrap}>
+        <div className="home-banner animate-fade-in" style={styles.bannerWrap}>
           <Image
             src="/banner.png"
             alt="Siddipet Police Udyoga Mitra 2026"
@@ -31,30 +32,30 @@ export default function Home() {
         </div>
 
         {/* Hero */}
-        <div className="animate-fade-in-up" style={styles.hero}>
-          <div style={styles.brandBadge}>
+        <div className="home-hero animate-fade-in-up" style={styles.hero}>
+          <div className="home-brand-badge" style={styles.brandBadge}>
             <span style={styles.brandIcon}>🚔</span>
             Siddipet Police
           </div>
-          <h1 style={styles.heading}>
+          <h1 className="home-heading" style={styles.heading}>
             POLICE UDYOGA <span style={styles.headingAccent}>MITRA</span>
             <br />
             Job Portal
           </h1>
-          <p style={styles.subheading}>
+          <p className="home-subheading" style={styles.subheading}>
             Official Recruitment Portal launched on 23/04/2026. Track every application and get real-time status intelligence.
           </p>
         </div>
 
         <div
-          className="animate-fade-in-up stagger-2"
+          className="home-lookup-card animate-fade-in-up stagger-2"
           style={styles.lookupCard}
         >
           <h2 style={styles.cardTitle}>🔍 Candidate Status Lookup</h2>
           <p style={styles.cardSub}>
             Enter your <strong>Aadhar Number</strong>, Mobile, or Email to view your dashboard
           </p>
-          <div style={styles.inputRow}>
+          <div className="home-input-row" style={styles.inputRow}>
             <input
               type="text"
               className="input-field input-large"
@@ -66,7 +67,7 @@ export default function Home() {
               id="cid-input"
             />
             <button
-              className="btn-primary"
+              className="btn-primary home-lookup-btn"
               onClick={handleLookup}
               style={styles.lookupBtn}
               disabled={!cid.trim()}
@@ -77,14 +78,14 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="animate-fade-in-up stagger-3" style={styles.loginRow}>
-          <div style={styles.hrCard}>
-            <h2 style={styles.hrTitle}>For Company HR Teams</h2>
-            <p style={styles.hrSub}>
+        <div className="home-login-row animate-fade-in-up stagger-3" style={styles.loginRow}>
+          <div className="home-login-card" style={styles.hrCard}>
+            <h2 className="home-login-title" style={styles.hrTitle}>For Company HR Teams</h2>
+            <p className="home-login-sub" style={styles.hrSub}>
               Login to review shortlisted candidates and hiring data.
             </p>
             <button
-              className="btn-primary"
+              className="btn-primary home-login-btn"
               onClick={() => router.push("/hr/login")}
               style={styles.hrBtn}
               id="hr-login-btn"
@@ -93,13 +94,13 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={styles.hrCard}>
-            <h2 style={styles.hrTitle}>For Admin Team</h2>
-            <p style={styles.hrSub}>
+          <div className="home-login-card" style={styles.hrCard}>
+            <h2 className="home-login-title" style={styles.hrTitle}>For Admin Team</h2>
+            <p className="home-login-sub" style={styles.hrSub}>
               Login to access admin analytics and candidate controls.
             </p>
             <button
-              className="btn-primary"
+              className="btn-primary home-login-btn"
               onClick={() => router.push("/admin/login")}
               style={styles.hrBtn}
               id="admin-login-btn"
@@ -111,16 +112,7 @@ export default function Home() {
 
 
 
-        {/* Footer */}
-        <footer style={styles.footer}>
-          <p style={styles.footerText}>
-            Siddipet POLICE UDYOGA MITRA — v2.0 (23/04/2026)
-          </p>
-          <div style={styles.poweredBy}>
-            <span style={styles.poweredText}>POWERED BY</span>
-            <Image src="/applywizz_logo.jpg" alt="ApplyWizz" width={140} height={40} style={styles.poweredLogo} />
-          </div>
-        </footer>
+        <ApplyWizzFooter />
       </main>
     </div>
   );
