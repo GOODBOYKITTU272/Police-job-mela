@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import {
   getAdminStats,
   getAllCandidates,
@@ -174,13 +175,13 @@ function AdminDashboard() {
   return (
     <div style={S.page}>
       <div style={S.container}>
-        <header style={S.header} className="animate-fade-in-up">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <header style={S.header} className="admin-header animate-fade-in-up">
+          <div className="admin-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h1 style={{ fontSize: "2rem", fontWeight: 800 }}>Udyogh Mitra Admin</h1>
               <p style={{ color: "#94a3b8" }}>Siddipet Police Recruitment Overview</p>
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="admin-header-actions" style={{ display: "flex", gap: 10 }}>
               <button className="btn-secondary" onClick={() => router.push("/")}>
                 ← Back to Portal
               </button>
@@ -192,7 +193,7 @@ function AdminDashboard() {
         </header>
 
         {stats && (
-          <div className="animate-fade-in-up stagger-1" style={S.statsRow}>
+          <div className="admin-stats-row animate-fade-in-up stagger-1" style={S.statsRow}>
             <div className="stat-card blue" style={S.statTile}>
               <span style={{ fontSize: "1.5rem" }}>👥</span>
               <div>
@@ -232,7 +233,7 @@ function AdminDashboard() {
         )}
 
         <section className="animate-fade-in-up stagger-2">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div className="admin-directory-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={S.directoryHeaderWrap}>
               <h2 className="section-title" style={{ margin: 0 }}>
                 {directoryView === "companies"
@@ -276,7 +277,7 @@ function AdminDashboard() {
             </div>
             <input
               type="text"
-              className="input-field"
+              className="input-field admin-search-input"
               placeholder={
                 directoryView === "companies"
                   ? "Search by Company, Sector, Education, Vacancy, or Counts..."
@@ -291,7 +292,7 @@ function AdminDashboard() {
             />
           </div>
 
-          <div className="glass-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="glass-card responsive-table-card" style={{ padding: 0, overflow: "hidden" }}>
             <table style={S.table}>
               {directoryView === "companies" ? (
                 <>

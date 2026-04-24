@@ -70,6 +70,8 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -79,6 +81,19 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select {
+  min-width: 0;
 }
 
 /* ── Official Background ────────────────────────────────────── */
@@ -100,7 +115,7 @@ body::before {
 h1, h2, h3, h4, h5, h6 {
   font-weight: 800;
   color: var(--accent-navy);
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 
@@ -330,9 +345,325 @@ h3 { font-size: 1.25rem; }
   font-family: var(--font-mono);
   font-weight: 600;
   text-align: center;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border-radius: var(--radius-xl);
   text-transform: uppercase;
+}
+
+/* Responsive app shell fixes */
+.responsive-table-card {
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-card table {
+  min-width: 680px;
+}
+
+.applywizz-footer {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 0;
+  margin-top: 24px;
+}
+
+.applywizz-footer-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.92;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.applywizz-footer-link:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.applywizz-footer-logo {
+  width: min(160px, 38vw);
+  height: auto;
+  object-fit: contain;
+}
+
+.admin-header-row,
+.admin-header-actions,
+.admin-directory-toolbar,
+.hr-header-actions {
+  min-width: 0;
+}
+
+.admin-header-row {
+  gap: 16px;
+}
+
+.admin-header-actions,
+.hr-header-actions {
+  flex-wrap: wrap;
+}
+
+.admin-search-input {
+  width: 100%;
+}
+
+.candidate-header-info > div:last-child,
+.hr-card-top > h2,
+.home-main {
+  min-width: 0;
+}
+
+.candidate-name,
+.candidate-cid-row,
+.hr-card-top,
+.powered-by {
+  overflow-wrap: anywhere;
+}
+
+.admin-header h1,
+.candidate-name,
+.home-heading {
+  letter-spacing: 0 !important;
+}
+
+.admin-header .btn-secondary,
+.hr-header-actions .btn-secondary,
+.home-lookup-btn,
+.home-login-btn {
+  min-width: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .admin-header-row,
+  .admin-directory-toolbar {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .admin-directory-toolbar {
+    gap: 12px;
+  }
+
+  .admin-search-input {
+    max-width: none !important;
+  }
+
+  .admin-header-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-stats-row {
+    flex-wrap: wrap !important;
+  }
+
+  .admin-stats-row .stat-card {
+    flex: 1 1 calc(50% - 8px) !important;
+    min-width: 220px !important;
+  }
+
+  .responsive-table-card table {
+    min-width: 860px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-page-shell {
+    align-items: stretch !important;
+    padding: 20px 12px !important;
+  }
+
+  .home-main {
+    gap: 14px !important;
+  }
+
+  .home-banner,
+  .candidate-banner {
+    border-radius: 10px !important;
+    margin-bottom: 4px !important;
+    box-shadow: 0 10px 24px rgba(0, 26, 61, 0.16) !important;
+  }
+
+  .home-brand-badge {
+    margin-bottom: 12px !important;
+    max-width: 100%;
+    white-space: normal;
+    justify-content: center;
+    letter-spacing: 0 !important;
+  }
+
+  .home-heading {
+    font-size: 2rem !important;
+    line-height: 1.14 !important;
+    margin-bottom: 10px !important;
+  }
+
+  .home-subheading {
+    font-size: 0.95rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .home-lookup-card,
+  .home-login-card,
+  .candidate-routing-card,
+  .candidate-profile-card {
+    padding: 20px !important;
+    border-radius: 12px !important;
+  }
+
+  .home-input-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .home-lookup-btn,
+  .home-login-btn {
+    width: 100% !important;
+  }
+
+  .home-login-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .home-login-card {
+    min-width: 0 !important;
+  }
+
+  .input-large {
+    padding: 14px 16px !important;
+    font-size: 1rem !important;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .candidate-page-shell,
+  .hr-page-shell {
+    padding: 20px 12px !important;
+  }
+
+  .candidate-header-info {
+    align-items: flex-start !important;
+  }
+
+  .candidate-profile-grid,
+  .hr-candidate-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .candidate-sector-value {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .auth-card {
+    padding: 24px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-header-row,
+  .admin-directory-toolbar,
+  .hr-header,
+  .hr-filter-inner,
+  .hr-filter-left {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .admin-header-actions,
+  .hr-header-actions,
+  .hr-filter-buttons {
+    width: 100%;
+  }
+
+  .admin-header-actions .btn-secondary,
+  .hr-header-actions .btn-secondary,
+  .hr-filter-buttons button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .admin-stats-row .stat-card {
+    min-width: 100% !important;
+  }
+
+  .admin-header h1,
+  .candidate-name {
+    font-size: 1.45rem !important;
+  }
+
+  .candidate-header-info {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .candidate-cid-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  .candidate-list-card-row,
+  .hr-card-top,
+  .powered-by {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .powered-by {
+    align-items: center !important;
+  }
+
+  .responsive-modal-overlay {
+    align-items: flex-end !important;
+    padding: 10px !important;
+  }
+
+  .responsive-modal-card {
+    max-height: 92vh !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-page-shell {
+    padding: 12px 8px !important;
+  }
+
+  .home-heading {
+    font-size: 1.55rem !important;
+  }
+
+  .home-lookup-card,
+  .home-login-card,
+  .candidate-sector-banner,
+  .candidate-routing-card,
+  .candidate-profile-card,
+  .auth-card {
+    padding: 16px !important;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    white-space: normal;
+  }
+
+  .home-footer {
+    padding-top: 8px !important;
+  }
+
+  .applywizz-footer-logo {
+    width: min(110px, 42vw);
+  }
 }
 
 /* ── Upload Zone ────────────────────────────────────────────── */
