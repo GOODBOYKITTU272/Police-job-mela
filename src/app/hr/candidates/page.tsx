@@ -2,19 +2,35 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import {
   CandidateIntent,
   CompanyDecision,
-  getHrAllocatedCandidatesByEmail,
+  getHrDashboardDataByEmail,
   HrAllocatedCandidatePreview,
   updateCandidateAllocationDecision,
 } from "@/lib/supabase";
+
+type HrFilterOption = "All" | CandidateIntent | CompanyDecision;
+type HrViewMode = "grid" | "table";
+
+const HR_FILTER_OPTIONS: HrFilterOption[] = [
+  "All",
+  "Pending",
+  "Not Interested",
+  "Will Attend",
+  "No Show",
+  "Not Selected",
+  "Selected",
+];
 
 export default function HrCandidatesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<HrAllocatedCandidatePreview[]>([]);
-  const [intentFilter, setIntentFilter] = useState<"All" | CandidateIntent>("All");
+  const [companyNames, setCompanyNames] = useState<string[]>([]);
+  const [intentFilter, setIntentFilter] = useState<HrFilterOption>("All");
+  const [viewMode, setViewMode] = useState<HrViewMode>("grid");
   const [selectedCandidate, setSelectedCandidate] =
     useState<HrAllocatedCandidatePreview | null>(null);
   const [savingDecisionFor, setSavingDecisionFor] = useState<string | null>(null);
@@ -32,8 +48,9 @@ export default function HrCandidatesPage() {
     }
 
     (async () => {
-      const rows = await getHrAllocatedCandidatesByEmail(hrEmail);
-      setCandidates(rows);
+      const dashboardData = await getHrDashboardDataByEmail(hrEmail);
+      setCompanyNames(dashboardData.companyNames);
+      setCandidates(dashboardData.candidates);
       setLoading(false);
     })();
   }, [router]);
@@ -47,7 +64,15 @@ export default function HrCandidatesPage() {
   const filteredCandidates =
     intentFilter === "All"
       ? candidates
-      : candidates.filter((candidate) => candidate.intent === intentFilter);
+      : candidates.filter(
+          (candidate) =>
+            candidate.intent === intentFilter ||
+            candidate.company_decision === intentFilter
+        );
+
+  const companyTitle = companyNames.length
+    ? `Company Dashboard: ${companyNames.join(", ")}`
+    : "Company Dashboard";
 
   const getDecisionKey = (candidate: HrAllocatedCandidatePreview) =>
     `${candidate.id}::${candidate.allocated_company_name}`;
@@ -105,17 +130,17 @@ export default function HrCandidatesPage() {
   };
 
   return (
-    <div style={styles.page}>
-      <main style={styles.main}>
-        <header style={styles.header}>
+    <div className="hr-page-shell" style={styles.page}>
+      <main className="hr-main" style={styles.main}>
+        <header className="hr-header" style={styles.header}>
           <div>
             <p style={styles.kicker}>HR Dashboard</p>
-            <h1 style={styles.title}>List of Candidates</h1>
+            <h1 style={styles.title}>{companyTitle}</h1>
             <p style={styles.subtitle}>
               Showing candidates allocated to your company.
             </p>
           </div>
-          <div style={styles.headerActions}>
+          <div className="hr-header-actions" style={styles.headerActions}>
             <button className="btn-secondary" type="button" onClick={() => router.push("/")}>
               ← Back to Portal
             </button>
@@ -125,36 +150,62 @@ export default function HrCandidatesPage() {
           </div>
         </header>
 
-        <section style={styles.filterBar}>
-          <div style={styles.filterBarInner}>
-            <div style={styles.filterLeft}>
-              <span style={styles.filterLabel}>Filter by Intent</span>
-              <div style={styles.filterButtonsWrap}>
-                {(["All", "Pending", "Not Interested", "Will Attend"] as const).map(
-                  (option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setIntentFilter(option)}
-                      style={{
-                        ...styles.filterBtn,
-                        ...(intentFilter === option
-                          ? styles.filterBtnActive
-                          : styles.filterBtnInactive),
-                      }}
-                    >
-                      {option}
-                    </button>
-                  )
-                )}
+        <section className="hr-filter-bar" style={styles.filterBar}>
+          <div className="hr-filter-inner" style={styles.filterBarInner}>
+            <div className="hr-filter-left" style={styles.filterLeft}>
+              <span style={styles.filterLabel}>Filter by Intent / Decision</span>
+              <div className="hr-filter-buttons" style={styles.filterButtonsWrap}>
+                {HR_FILTER_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setIntentFilter(option)}
+                    style={{
+                      ...styles.filterBtn,
+                      ...(intentFilter === option
+                        ? styles.filterBtnActive
+                        : styles.filterBtnInactive),
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             </div>
-            {!loading ? (
-              <span style={styles.filterCount}>
-                {filteredCandidates.length}{" "}
-                {filteredCandidates.length === 1 ? "candidate" : "candidates"}
-              </span>
-            ) : null}
+            <div style={styles.filterRight}>
+              <div style={styles.viewToggle}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  style={{
+                    ...styles.viewToggleBtn,
+                    ...(viewMode === "grid"
+                      ? styles.filterBtnActive
+                      : styles.filterBtnInactive),
+                  }}
+                >
+                  Grid View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  style={{
+                    ...styles.viewToggleBtn,
+                    ...(viewMode === "table"
+                      ? styles.filterBtnActive
+                      : styles.filterBtnInactive),
+                  }}
+                >
+                  Table View
+                </button>
+              </div>
+              {!loading ? (
+                <span style={styles.filterCount}>
+                  {filteredCandidates.length}{" "}
+                  {filteredCandidates.length === 1 ? "candidate" : "candidates"}
+                </span>
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -162,11 +213,11 @@ export default function HrCandidatesPage() {
           <div className="glass-card" style={styles.loadingCard}>
             Loading candidates...
           </div>
-        ) : (
-          <div style={styles.grid}>
+        ) : viewMode === "grid" ? (
+          <div className="hr-candidate-grid" style={styles.grid}>
             {filteredCandidates.map((candidate) => (
-              <article key={candidate.id} className="glass-card" style={styles.card}>
-                <div style={styles.cardTop}>
+              <article key={candidate.id} className="hr-candidate-card glass-card" style={styles.card}>
+                <div className="hr-card-top" style={styles.cardTop}>
                   <h2 style={styles.name}>{candidate.name || "Unnamed Candidate"}</h2>
                   <span style={styles.cid}>{candidate.id}</span>
                 </div>
@@ -200,11 +251,66 @@ export default function HrCandidatesPage() {
               </div>
             ) : null}
           </div>
+        ) : (
+          <div className="glass-card responsive-table-card" style={styles.tableCard}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Candidate</th>
+                  <th style={styles.th}>CID</th>
+                  <th style={styles.th}>Company</th>
+                  <th style={styles.th}>Intent</th>
+                  <th style={styles.th}>Decision</th>
+                  <th style={styles.th}>Education</th>
+                  <th style={{ ...styles.th, textAlign: "right" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCandidates.map((candidate) => (
+                  <tr key={`${candidate.id}-${candidate.allocated_company_name}`} style={styles.tr}>
+                    <td style={{ ...styles.td, fontWeight: 800 }}>{candidate.name || "-"}</td>
+                    <td style={{ ...styles.td, fontFamily: "var(--font-mono)" }}>{candidate.id}</td>
+                    <td style={styles.td}>{candidate.allocated_company_name}</td>
+                    <td style={styles.td}>
+                      <IntentBadge intent={candidate.intent} />
+                    </td>
+                    <td style={styles.td}>
+                      <DecisionRow
+                        value={candidate.company_decision}
+                        disabled={savingDecisionFor === getDecisionKey(candidate)}
+                        onChange={(value) => handleDecisionChange(candidate, value)}
+                        showLabel={false}
+                      />
+                    </td>
+                    <td style={styles.td}>{candidate.education_qualification || "-"}</td>
+                    <td style={{ ...styles.td, textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCandidate(candidate)}
+                        style={styles.viewMoreBtn}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredCandidates.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={styles.emptyTableCell}>
+                      No candidates found for the selected filter.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         )}
 
+        <ApplyWizzFooter />
+
         {selectedCandidate ? (
-          <div style={styles.modalOverlay} onClick={() => setSelectedCandidate(null)}>
-            <div style={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+          <div className="responsive-modal-overlay" style={styles.modalOverlay} onClick={() => setSelectedCandidate(null)}>
+            <div className="responsive-modal-card" style={styles.modalCard} onClick={(event) => event.stopPropagation()}>
               <div style={styles.modalHeader}>
                 <h2 style={styles.modalTitle}>
                   {selectedCandidate.name || "Candidate Details"}
@@ -262,6 +368,15 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
 }
 
 function IntentRow({ intent }: { intent: CandidateIntent }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>Intent</span>
+      <IntentBadge intent={intent} />
+    </div>
+  );
+}
+
+function IntentBadge({ intent }: { intent: CandidateIntent }) {
   const variant =
     intent === "Will Attend"
       ? styles.intentBadgeAttend
@@ -269,32 +384,29 @@ function IntentRow({ intent }: { intent: CandidateIntent }) {
       ? styles.intentBadgeNotInterested
       : styles.intentBadgePending;
 
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>Intent</span>
-      <span style={{ ...styles.intentBadgeBase, ...variant }}>{intent}</span>
-    </div>
-  );
+  return <span style={{ ...styles.intentBadgeBase, ...variant }}>{intent}</span>;
 }
 
 function DecisionRow({
   value,
   disabled,
   onChange,
+  showLabel = true,
 }: {
   value: CompanyDecision | null;
   disabled?: boolean;
   onChange: (value: string) => void;
+  showLabel?: boolean;
 }) {
   return (
     <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>Company Decision</span>
+      {showLabel ? <span style={styles.infoLabel}>Company Decision</span> : null}
       <select
         className="input-field"
         value={value || ""}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        style={styles.decisionSelect}
+        style={{ ...styles.decisionSelect, ...getDecisionSelectStyle(value) }}
       >
         <option value="">Select</option>
         <option value="No Show">No Show</option>
@@ -303,6 +415,34 @@ function DecisionRow({
       </select>
     </div>
   );
+}
+
+function getDecisionSelectStyle(value: CompanyDecision | null): React.CSSProperties {
+  if (value === "Selected") {
+    return {
+      background: "rgba(52, 211, 153, 0.16)",
+      borderColor: "rgba(16, 185, 129, 0.45)",
+      color: "#047857",
+      fontWeight: 800,
+    };
+  }
+  if (value === "Not Selected") {
+    return {
+      background: "rgba(248, 113, 113, 0.16)",
+      borderColor: "rgba(220, 38, 38, 0.38)",
+      color: "#b91c1c",
+      fontWeight: 800,
+    };
+  }
+  if (value === "No Show") {
+    return {
+      background: "rgba(245, 158, 11, 0.16)",
+      borderColor: "rgba(217, 119, 6, 0.4)",
+      color: "#92400e",
+      fontWeight: 800,
+    };
+  }
+  return {};
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -357,6 +497,13 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap" as const,
     flexShrink: 0,
   },
+  filterRight: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
   filterLabel: {
     fontSize: "0.82rem",
     fontWeight: 700,
@@ -365,6 +512,11 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.05em",
   },
   filterButtonsWrap: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+  viewToggle: {
     display: "flex",
     gap: "8px",
     flexWrap: "wrap",
@@ -387,6 +539,14 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#001A3D",
     color: "#ffffff",
     borderColor: "#001A3D",
+  },
+  viewToggleBtn: {
+    borderRadius: "999px",
+    padding: "8px 14px",
+    fontSize: "0.85rem",
+    fontWeight: 800,
+    border: "1px solid transparent",
+    cursor: "pointer",
   },
   kicker: {
     fontSize: "0.8rem",
@@ -560,5 +720,37 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center" as const,
     color: "#64748b",
     fontWeight: 600,
+  },
+  tableCard: {
+    padding: 0,
+    overflow: "hidden",
+    background: "#ffffff",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse" as const,
+  },
+  th: {
+    padding: "14px 16px",
+    textAlign: "left" as const,
+    color: "#64748b",
+    fontSize: "0.78rem",
+    textTransform: "uppercase" as const,
+    borderBottom: "1px solid rgba(0,26,61,0.08)",
+  },
+  td: {
+    padding: "14px 16px",
+    borderBottom: "1px solid rgba(0,26,61,0.06)",
+    color: "#001A3D",
+    fontSize: "0.9rem",
+  },
+  tr: {
+    transition: "background 0.2s ease",
+  },
+  emptyTableCell: {
+    padding: "28px",
+    textAlign: "center" as const,
+    color: "#64748b",
+    fontWeight: 700,
   },
 };

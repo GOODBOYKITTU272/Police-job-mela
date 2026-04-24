@@ -83,6 +83,7 @@ export interface HrAllocatedCandidatePreview extends HrCandidatePreview {
 }
 
 export interface RoutingCompany {
+  allocation_id?: number;
   company_name: string;
   sector?: string | null;
   education?: string | null;
@@ -90,11 +91,17 @@ export interface RoutingCompany {
   assigned_count?: number | null;
   remaining?: number | null;
   intent?: CandidateIntent;
+  company_decision?: CompanyDecision | null;
 }
 
 export interface RoutingResult {
   assigned_sector: string;
   companies: RoutingCompany[];
+}
+
+export interface HrDashboardData {
+  companyNames: string[];
+  candidates: HrAllocatedCandidatePreview[];
 }
 
 export type CandidateIntent = 'Pending' | 'Not Interested' | 'Will Attend';
@@ -147,6 +154,21 @@ function normalizeNumberValue(value: unknown): number | null {
 
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeCandidateIntent(value: unknown): CandidateIntent {
+  const rawIntent = String(value || '').trim().toLowerCase();
+  if (rawIntent === 'not interested') return 'Not Interested';
+  if (rawIntent === 'will attend') return 'Will Attend';
+  return 'Pending';
+}
+
+function normalizeCompanyDecision(value: unknown): CompanyDecision | null {
+  const rawDecision = String(value || '').trim().toLowerCase();
+  if (rawDecision === 'no show') return 'No Show';
+  if (rawDecision === 'not selected') return 'Not Selected';
+  if (rawDecision === 'selected') return 'Selected';
+  return null;
 }
 
 // ── API Functions ────────────────────────────────────────────
@@ -344,14 +366,11 @@ export async function getHrCandidatesPreview(limit = 3): Promise<HrCandidatePrev
   return (data || []) as HrCandidatePreview[];
 }
 
-export async function getHrAllocatedCandidatesByEmail(
-  email: string
-): Promise<HrAllocatedCandidatePreview[]> {
+async function getHrCompanyNamesByEmail(email: string): Promise<string[]> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return [];
 
   const tableNames = ['Company_details', 'company_details'];
-  let companyNames: string[] = [];
 
   for (const tableName of tableNames) {
     const { data, error } = await supabase
@@ -360,15 +379,23 @@ export async function getHrAllocatedCandidatesByEmail(
       .ilike('email', normalizedEmail);
 
     if (!error && data && data.length > 0) {
-      companyNames = data
+      const companyNames = data
         .map((row) => String(row.company_name || '').trim())
         .filter(Boolean);
-      if (companyNames.length > 0) break;
+      if (companyNames.length > 0) return companyNames;
     }
   }
 
+  return [];
+}
+
+export async function getHrDashboardDataByEmail(
+  email: string
+): Promise<HrDashboardData> {
+  const companyNames = await getHrCompanyNamesByEmail(email);
+
   if (companyNames.length === 0) {
-    return [];
+    return { companyNames: [], candidates: [] };
   }
 
   const { data: allocations, error: allocationError } = await supabase
@@ -377,7 +404,7 @@ export async function getHrAllocatedCandidatesByEmail(
     .in('company_name', companyNames);
 
   if (allocationError || !allocations || allocations.length === 0) {
-    return [];
+    return { companyNames, candidates: [] };
   }
 
   const candidateIds = Array.from(
@@ -389,7 +416,7 @@ export async function getHrAllocatedCandidatesByEmail(
   );
 
   if (candidateIds.length === 0) {
-    return [];
+    return { companyNames, candidates: [] };
   }
 
   const { data: candidates, error: candidateError } = await supabase
@@ -398,7 +425,7 @@ export async function getHrAllocatedCandidatesByEmail(
     .in('id', candidateIds);
 
   if (candidateError || !candidates || candidates.length === 0) {
-    return [];
+    return { companyNames, candidates: [] };
   }
 
   const candidateMap = new Map<string, HrCandidatePreview>();
@@ -412,26 +439,22 @@ export async function getHrAllocatedCandidatesByEmail(
     const candidate = candidateMap.get(candidateId);
     if (!candidate) return;
 
-    const rawIntent = String(allocation.intent || '').trim().toLowerCase();
-    let normalizedIntent: CandidateIntent = 'Pending';
-    if (rawIntent === 'not interested') normalizedIntent = 'Not Interested';
-    if (rawIntent === 'will attend') normalizedIntent = 'Will Attend';
-
-    const rawDecision = String(allocation.company_decision || '').trim().toLowerCase();
-    let normalizedDecision: CompanyDecision | null = null;
-    if (rawDecision === 'no show') normalizedDecision = 'No Show';
-    if (rawDecision === 'not selected') normalizedDecision = 'Not Selected';
-    if (rawDecision === 'selected') normalizedDecision = 'Selected';
-
     rows.push({
       ...candidate,
       allocated_company_name: String(allocation.company_name || '').trim(),
-      intent: normalizedIntent,
-      company_decision: normalizedDecision,
+      intent: normalizeCandidateIntent(allocation.intent),
+      company_decision: normalizeCompanyDecision(allocation.company_decision),
     });
   });
 
-  return rows;
+  return { companyNames, candidates: rows };
+}
+
+export async function getHrAllocatedCandidatesByEmail(
+  email: string
+): Promise<HrAllocatedCandidatePreview[]> {
+  const dashboardData = await getHrDashboardDataByEmail(email);
+  return dashboardData.candidates;
 }
 
 function inferSectorForCandidate(candidate: Candidate): string {
@@ -468,8 +491,33 @@ function scoreByEducation(
 }
 
 export async function getCandidateRouting(candidate: Candidate): Promise<RoutingResult> {
-  const fallbackAssignedSector = inferSectorForCandidate(candidate);
+  const fallbackAssignedSector = candidate.assigned_sector || inferSectorForCandidate(candidate);
 
+  const { data: allocationRows } = await supabase
+    .from('candidate_allocations')
+    .select('id, company_name, sector, intent, company_decision')
+    .eq('candidate_id', candidate.id)
+    .order('id', { ascending: true });
+
+  if (allocationRows && allocationRows.length > 0) {
+    const allocationSector = allocationRows
+      .map((row) => String(row.sector || '').trim())
+      .find(Boolean);
+    const assigned_sector = allocationSector || fallbackAssignedSector;
+    const companies = allocationRows
+      .map((row) => ({
+        allocation_id: Number(row.id),
+        company_name: String(row.company_name || '').trim(),
+        sector: row.sector ? String(row.sector).trim() : null,
+        intent: normalizeCandidateIntent(row.intent),
+        company_decision: normalizeCompanyDecision(row.company_decision),
+      }))
+      .filter((company) => company.company_name);
+
+    return { assigned_sector, companies };
+  }
+
+  const assigned_sector = fallbackAssignedSector;
   const tableNames = ['Company_details', 'company_details'];
   let rows: Record<string, unknown>[] = [];
 
@@ -482,36 +530,20 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
   }
 
   const education = (candidate.education_qualification || '').toUpperCase();
-  const { data: allocationRows } = await supabase
+  const { data: intentRows } = await supabase
     .from('candidate_allocations')
-    .select('company_name, intent, sector, allocated_at')
-    .eq('candidate_id', candidate.id)
-    .order('allocated_at', { ascending: true });
+    .select('company_name, intent')
+    .eq('candidate_id', candidate.id);
 
   const intentMap = new Map<string, CandidateIntent>();
-  const allocationOrder: string[] = [];
-  let assignedSectorFromAllocations = '';
-  (allocationRows || []).forEach((row) => {
+  (intentRows || []).forEach((row) => {
     const company = String(row.company_name || '').trim().toLowerCase();
     if (!company) return;
 
-    const rawIntent = String(row.intent || '').trim().toLowerCase();
-    let normalized: CandidateIntent = 'Pending';
-    if (rawIntent === 'not interested') normalized = 'Not Interested';
-    if (rawIntent === 'will attend') normalized = 'Will Attend';
-
-    intentMap.set(company, normalized);
-
-    if (!allocationOrder.includes(company)) {
-      allocationOrder.push(company);
-    }
-
-    if (!assignedSectorFromAllocations) {
-      assignedSectorFromAllocations = String(row.sector || '').trim();
-    }
+    intentMap.set(company, normalizeCandidateIntent(row.intent));
   });
 
-  const companyDirectoryRows = rows
+  const companies = rows
     .map((row) => {
       const company_name = String(row.company_name || row.company || '').trim();
       const sector = String(row.sector || '').trim();
@@ -530,50 +562,8 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
         eduScore,
         available,
       };
-    });
-
-  // Primary path: show companies allocated to this exact candidate_id.
-  if (allocationOrder.length > 0) {
-    const companyByKey = new Map(
-      companyDirectoryRows.map((row) => [row.company_name.toLowerCase(), row] as const)
-    );
-
-    const companies = allocationOrder
-      .map((companyKey) => {
-        const matched = companyByKey.get(companyKey);
-        if (matched) {
-          return {
-            company_name: matched.company_name,
-            sector: matched.sector,
-            education: matched.education,
-            vacancy: matched.vacancy,
-            assigned_count: matched.assigned_count,
-            intent: intentMap.get(companyKey) || 'Pending',
-          };
-        }
-
-        // If a company is present in allocations but missing from Company_details,
-        // still show it so candidate-specific routing remains accurate.
-        return {
-          company_name: companyKey,
-          sector: assignedSectorFromAllocations || fallbackAssignedSector,
-          education: null,
-          vacancy: 0,
-          assigned_count: 0,
-          intent: intentMap.get(companyKey) || 'Pending',
-        };
-      })
-      .slice(0, 5);
-
-    return {
-      assigned_sector: assignedSectorFromAllocations || fallbackAssignedSector,
-      companies,
-    };
-  }
-
-  // Fallback path: infer by education + sector when no allocations exist yet.
-  const companies = companyDirectoryRows
-    .filter((company) => company.company_name && company.sector === fallbackAssignedSector)
+    })
+    .filter((company) => company.company_name && company.sector === assigned_sector)
     .sort((a, b) => {
       if (b.eduScore !== a.eduScore) return b.eduScore - a.eduScore;
       return b.available - a.available;
@@ -588,7 +578,7 @@ export async function getCandidateRouting(candidate: Candidate): Promise<Routing
       intent: intentMap.get(c.company_name.toLowerCase()) || 'Pending',
     }));
 
-  return { assigned_sector: fallbackAssignedSector, companies };
+  return { assigned_sector, companies };
 }
 
 export async function updateCandidateAllocationIntent(
@@ -630,84 +620,59 @@ export async function getAdminStats() {
     .from('candidates')
     .select('id', { count: 'exact', head: true });
 
-  // Primary source: legacy applications table
-  const { data: applications, count: applicationCount, error: applicationError } = await supabase
-    .from('applications')
-    .select('candidate_id, status, category', { count: 'exact' });
-
-  const apps = applications || [];
-  const hasReadableApplications = !applicationError && apps.length > 0;
-
-  let totalApplications = applicationCount || 0;
+  let totalApplications = 0;
   let statusBreakdown: Record<string, number> = {};
   let categoryBreakdown: Record<string, number> = {};
   let multiPipeline = 0;
 
-  if (hasReadableApplications) {
-    apps.forEach((app) => {
-      statusBreakdown[app.status] = (statusBreakdown[app.status] || 0) + 1;
-      if (app.category) {
-        categoryBreakdown[app.category] = (categoryBreakdown[app.category] || 0) + 1;
-      }
-    });
+  const candidateAllocations: Record<string, number> = {};
+  const intentBreakdown: Record<string, number> = {};
+  const decisionBreakdown: Record<string, number> = {};
+  let pendingDecisionCount = 0;
+  const willAttendCandidates = new Set<string>();
+  let allocationRowsSeen = 0;
 
-    const candidateApps: Record<string, number> = {};
-    apps.forEach((app) => {
-      candidateApps[app.candidate_id] = (candidateApps[app.candidate_id] || 0) + 1;
-    });
-    multiPipeline = Object.values(candidateApps).filter((count) => count > 1).length;
-    categoryBreakdown.Pending = 0;
-  } else {
-    // Fallback source: candidate_allocations (current workflow table)
-    const { count: allocationCount } = await supabase
+  let offset = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data: allocationRows, error: allocationError } = await supabase
       .from('candidate_allocations')
-      .select('candidate_id', { count: 'exact', head: true });
-    totalApplications = allocationCount || 0;
+      .select('candidate_id, intent, company_decision')
+      .range(offset, offset + pageSize - 1);
 
-    const candidateAllocations: Record<string, number> = {};
-    const intentBreakdown: Record<string, number> = {};
-    const decisionBreakdown: Record<string, number> = {};
-    let pendingDecisionCount = 0;
-    const willAttendCandidates = new Set<string>();
-
-    let offset = 0;
-    const pageSize = 1000;
-    while (true) {
-      const { data: allocationRows, error: allocationError } = await supabase
-        .from('candidate_allocations')
-        .select('candidate_id, intent, company_decision')
-        .range(offset, offset + pageSize - 1);
-
-      if (allocationError || !allocationRows || allocationRows.length === 0) {
-        break;
-      }
-
-      allocationRows.forEach((row) => {
-        const candidateId = String(row.candidate_id || '').trim();
-        if (!candidateId) return;
-
-        candidateAllocations[candidateId] = (candidateAllocations[candidateId] || 0) + 1;
-
-        const intent = String(row.intent || 'Pending').trim() || 'Pending';
-        intentBreakdown[intent] = (intentBreakdown[intent] || 0) + 1;
-        if (intent.toLowerCase() === 'will attend') {
-          willAttendCandidates.add(candidateId);
-        }
-
-        const decision = String(row.company_decision || '').trim();
-        if (decision) {
-          decisionBreakdown[decision] = (decisionBreakdown[decision] || 0) + 1;
-        } else {
-          pendingDecisionCount += 1;
-        }
-      });
-
-      if (allocationRows.length < pageSize) {
-        break;
-      }
-      offset += pageSize;
+    if (allocationError || !allocationRows || allocationRows.length === 0) {
+      break;
     }
 
+    allocationRowsSeen += allocationRows.length;
+    allocationRows.forEach((row) => {
+      const candidateId = String(row.candidate_id || '').trim();
+      if (!candidateId) return;
+
+      candidateAllocations[candidateId] = (candidateAllocations[candidateId] || 0) + 1;
+
+      const intent = normalizeCandidateIntent(row.intent);
+      intentBreakdown[intent] = (intentBreakdown[intent] || 0) + 1;
+      if (intent === 'Will Attend') {
+        willAttendCandidates.add(candidateId);
+      }
+
+      const decision = normalizeCompanyDecision(row.company_decision);
+      if (decision) {
+        decisionBreakdown[decision] = (decisionBreakdown[decision] || 0) + 1;
+      } else {
+        pendingDecisionCount += 1;
+      }
+    });
+
+    if (allocationRows.length < pageSize) {
+      break;
+    }
+    offset += pageSize;
+  }
+
+  if (allocationRowsSeen > 0) {
+    totalApplications = allocationRowsSeen;
     multiPipeline = Object.values(candidateAllocations).filter((count) => count > 1).length;
     statusBreakdown = {
       ...intentBreakdown,
@@ -717,6 +682,28 @@ export async function getAdminStats() {
       ...decisionBreakdown,
       Pending: pendingDecisionCount,
     };
+  } else {
+    const { data: applications, count: applicationCount, error: applicationError } = await supabase
+      .from('applications')
+      .select('candidate_id, status, category', { count: 'exact' });
+
+    const apps = applications || [];
+    if (!applicationError) {
+      totalApplications = applicationCount || 0;
+      apps.forEach((app) => {
+        statusBreakdown[app.status] = (statusBreakdown[app.status] || 0) + 1;
+        if (app.category) {
+          categoryBreakdown[app.category] = (categoryBreakdown[app.category] || 0) + 1;
+        }
+      });
+
+      const candidateApps: Record<string, number> = {};
+      apps.forEach((app) => {
+        candidateApps[app.candidate_id] = (candidateApps[app.candidate_id] || 0) + 1;
+      });
+      multiPipeline = Object.values(candidateApps).filter((count) => count > 1).length;
+      categoryBreakdown.Pending = 0;
+    }
   }
 
   return {

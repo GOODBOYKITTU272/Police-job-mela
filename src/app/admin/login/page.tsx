@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import { validateAdminLogin } from "@/lib/supabase";
 
 export default function AdminLoginPage() {
@@ -40,8 +41,8 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div style={styles.page}>
-      <main style={styles.main} className="glass-card">
+    <div className="auth-page-shell" style={styles.page}>
+      <main style={styles.main} className="auth-card glass-card">
         <div style={styles.topActions}>
           <button
             type="button"
@@ -109,6 +110,7 @@ export default function AdminLoginPage() {
             {loading ? "Checking..." : "Login"}
           </button>
         </form>
+        <ApplyWizzFooter />
       </main>
     </div>
   );

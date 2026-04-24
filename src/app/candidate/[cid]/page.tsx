@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
+import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import {
   getCandidateById,
   getCandidateRouting,
@@ -141,10 +142,10 @@ export default function CandidateDashboard() {
   if (!selectedCandidate) return null;
 
   return (
-    <div style={S.page}>
-      <div style={S.container}>
+    <div className="candidate-page-shell" style={S.page}>
+      <div className="candidate-container" style={S.container}>
         {/* Official Banner */}
-        <div className="animate-fade-in" style={S.bannerWrap}>
+        <div className="candidate-banner animate-fade-in" style={S.bannerWrap}>
           <Image
             src="/banner.png"
             alt="Siddipet POLICE UDYOGA MITRA 2026"
@@ -162,13 +163,13 @@ export default function CandidateDashboard() {
               {candidates.length > 1 ? "← Back to List" : "← Home"}
             </button>
           </div>
-          <div style={S.headerInfo}>
+          <div className="candidate-header-info" style={S.headerInfo}>
             <div style={S.avatar}>
               {selectedCandidate.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 style={S.name}>{selectedCandidate.name}</h1>
-              <div style={S.cidRow}>
+              <h1 className="candidate-name" style={S.name}>{selectedCandidate.name}</h1>
+              <div className="candidate-cid-row" style={S.cidRow}>
                 <span style={S.cidBadge}>{selectedCandidate.id}</span>
                 <span style={S.email}>{selectedCandidate.email}</span>
                 {selectedCandidate.phone && <span style={S.email}>📞 {selectedCandidate.phone}</span>}
@@ -179,25 +180,24 @@ export default function CandidateDashboard() {
 
         {/* Sector Assignment Banner */}
         {routing && (
-          <div className="animate-fade-in-up" style={S.sectorBanner}>
+          <div className="candidate-sector-banner animate-fade-in-up" style={S.sectorBanner}>
             <div style={S.sectorLabel}>YOUR ASSIGNED SECTOR</div>
-            <div style={S.sectorValue}>{routing.assigned_sector}</div>
+            <div className="candidate-sector-value" style={S.sectorValue}>{routing.assigned_sector}</div>
             <p style={S.sectorDesc}>Please proceed to the designated hall for this sector. Your matches are listed below.</p>
           </div>
         )}
 
         {/* Company List (Live Distribution) */}
         {routing && routing.companies.length > 0 && (
-          <div className="animate-fade-in-up glass-card" style={S.routingCard}>
-            <h3 style={S.profileTitle}>🏢 Recommended Companies (High Vacancy)</h3>
-            <div style={S.tableContainer}>
+          <div className="candidate-routing-card animate-fade-in-up glass-card" style={S.routingCard}>
+            <h3 style={S.profileTitle}>🏢 Recommended Companies</h3>
+            <div className="responsive-table-card" style={S.tableContainer}>
               <table style={S.table}>
                 <thead>
                   <tr style={S.tableHeader}>
                     <th style={S.th}>Company Name</th>
                     <th style={S.th}>Status</th>
                     <th style={S.th}>Intent</th>
-                    <th style={S.th}>Vacancies</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -238,21 +238,20 @@ export default function CandidateDashboard() {
                             <option value="Will Attend">Will Attend</option>
                           </select>
                         </td>
-                        <td style={S.td}>{company.vacancy ?? 0}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <p style={S.routingNote}>Showing top 5 companies with available spots in your sector.</p>
+            <p style={S.routingNote}>Showing companies assigned to your profile.</p>
           </div>
         )}
 
         {/* Detailed Profile Card */}
-        <div className="glass-card animate-fade-in-up" style={S.profileCard}>
+        <div className="candidate-profile-card glass-card animate-fade-in-up" style={S.profileCard}>
           <h3 style={S.profileTitle}>📋 Detailed Profile</h3>
-          <div style={S.profileGrid}>
+          <div className="candidate-profile-grid" style={S.profileGrid}>
             <ProfileItem label="Father's Name" value={selectedCandidate.father_name} />
             <ProfileItem label="Gender / Age" value={`${selectedCandidate.gender || '-'} / ${selectedCandidate.age || '-'}`} />
             <ProfileItem label="Aadhar Number" value={selectedCandidate.aadhar_number} />
@@ -276,13 +275,7 @@ export default function CandidateDashboard() {
           )}
         </div>
 
-        {/* Local Footer */}
-        <footer style={S.footer}>
-          <div style={S.poweredBy}>
-            <span style={S.poweredText}>POWERED BY</span>
-            <Image src="/applywizz_logo.png" alt="ApplyWizz" width={140} height={40} style={S.poweredLogo} />
-          </div>
-        </footer>
+        <ApplyWizzFooter />
       </div>
     </div>
   );
