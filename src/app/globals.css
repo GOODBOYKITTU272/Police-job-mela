@@ -595,6 +595,26 @@ h3 { font-size: 1.25rem; }
   .container { padding: 0 16px; }
   
   .stat-value { font-size: 1.5rem; }
+
+  .home-input-row {
+    flex-direction: column;
+  }
+
+  .home-input-row .btn-primary {
+    width: 100%;
+  }
+
+  .home-login-row {
+    flex-direction: column;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  td, th {
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 480px) {

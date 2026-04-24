@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import ApplyWizzFooter from "./components/ApplyWizzFooter";
 
 export default function Home() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function Home() {
           <p style={styles.cardSub}>
             Enter your <strong>Aadhar Number</strong>, Mobile, or Email to view your dashboard
           </p>
-          <div style={styles.inputRow}>
+          <div className="home-input-row" style={styles.inputRow}>
             <input
               type="text"
               className="input-field input-large"
@@ -77,7 +78,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="animate-fade-in-up stagger-3" style={styles.loginRow}>
+        <div className="animate-fade-in-up stagger-3 home-login-row" style={styles.loginRow}>
           <div style={styles.hrCard}>
             <h2 style={styles.hrTitle}>For Company HR Teams</h2>
             <p style={styles.hrSub}>
@@ -111,16 +112,7 @@ export default function Home() {
 
 
 
-        {/* Footer */}
-        <footer style={styles.footer}>
-          <p style={styles.footerText}>
-            Siddipet POLICE UDYOGA MITRA — v2.0 (23/04/2026)
-          </p>
-          <div style={styles.poweredBy}>
-            <span style={styles.poweredText}>POWERED BY</span>
-            <Image src="/applywizz_logo.jpg" alt="ApplyWizz" width={140} height={40} style={styles.poweredLogo} />
-          </div>
-        </footer>
+        <ApplyWizzFooter style={styles.footer} />
       </main>
     </div>
   );
@@ -221,23 +213,6 @@ const styles: Record<string, React.CSSProperties> = {
   headingAccent: {
     color: "#E31E24",
   },
-  poweredBy: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    marginTop: "16px",
-  },
-  poweredText: {
-    fontSize: "0.65rem",
-    fontWeight: 800,
-    color: "#475569",
-    letterSpacing: "0.1em",
-  },
-  poweredLogo: {
-    height: "32px",
-    width: "auto",
-  },
   subheading: {
     fontSize: "1.1rem",
     color: "#475569",
@@ -318,10 +293,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     textAlign: "center" as const,
-    paddingTop: "20px",
-  },
-  footerText: {
-    fontSize: "0.75rem",
-    color: "#475569",
+    paddingTop: "0",
   },
 };

@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 import { validateAdminLogin } from "@/lib/supabase";
 
 export default function AdminLoginPage() {
@@ -109,6 +110,7 @@ export default function AdminLoginPage() {
             {loading ? "Checking..." : "Login"}
           </button>
         </form>
+        <ApplyWizzFooter style={styles.footer} />
       </main>
     </div>
   );
@@ -183,5 +185,8 @@ const styles: Record<string, CSSProperties> = {
   submitBtn: {
     marginTop: "10px",
     width: "100%",
+  },
+  footer: {
+    marginTop: "20px",
   },
 };

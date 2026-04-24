@@ -371,12 +371,31 @@ export async function getHrAllocatedCandidatesByEmail(
     return [];
   }
 
-  const { data: allocations, error: allocationError } = await supabase
-    .from('candidate_allocations')
-    .select('candidate_id, company_name, intent, company_decision')
-    .in('company_name', companyNames);
+  const allocations: {
+    candidate_id: string | null;
+    company_name: string | null;
+    intent: string | null;
+    company_decision: string | null;
+  }[] = [];
+  let allocationOffset = 0;
+  const allocationPageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from('candidate_allocations')
+      .select('candidate_id, company_name, intent, company_decision')
+      .in('company_name', companyNames)
+      .range(allocationOffset, allocationOffset + allocationPageSize - 1);
 
-  if (allocationError || !allocations || allocations.length === 0) {
+    if (error || !data || data.length === 0) {
+      break;
+    }
+
+    allocations.push(...data);
+    if (data.length < allocationPageSize) break;
+    allocationOffset += allocationPageSize;
+  }
+
+  if (allocations.length === 0) {
     return [];
   }
 
@@ -392,17 +411,27 @@ export async function getHrAllocatedCandidatesByEmail(
     return [];
   }
 
-  const { data: candidates, error: candidateError } = await supabase
-    .from('candidates')
-    .select('id, name, email, phone, gender, village, mandal, district, education_qualification')
-    .in('id', candidateIds);
+  const candidates: HrCandidatePreview[] = [];
+  const idChunkSize = 500;
+  for (let index = 0; index < candidateIds.length; index += idChunkSize) {
+    const chunk = candidateIds.slice(index, index + idChunkSize);
+    const { data, error } = await supabase
+      .from('candidates')
+      .select('id, name, email, phone, gender, village, mandal, district, education_qualification')
+      .in('id', chunk);
 
-  if (candidateError || !candidates || candidates.length === 0) {
+    if (error || !data) {
+      continue;
+    }
+    candidates.push(...(data as HrCandidatePreview[]));
+  }
+
+  if (candidates.length === 0) {
     return [];
   }
 
   const candidateMap = new Map<string, HrCandidatePreview>();
-  (candidates as HrCandidatePreview[]).forEach((candidate) => {
+  candidates.forEach((candidate) => {
     candidateMap.set(candidate.id, candidate);
   });
 
@@ -630,94 +659,68 @@ export async function getAdminStats() {
     .from('candidates')
     .select('id', { count: 'exact', head: true });
 
-  // Primary source: legacy applications table
-  const { data: applications, count: applicationCount, error: applicationError } = await supabase
-    .from('applications')
-    .select('candidate_id, status, category', { count: 'exact' });
+  // Primary source: candidate_allocations (current workflow table)
+  const { count: allocationCount } = await supabase
+    .from('candidate_allocations')
+    .select('candidate_id', { count: 'exact', head: true });
 
-  const apps = applications || [];
-  const hasReadableApplications = !applicationError && apps.length > 0;
-
-  let totalApplications = applicationCount || 0;
+  const totalApplications = allocationCount || 0;
   let statusBreakdown: Record<string, number> = {};
   let categoryBreakdown: Record<string, number> = {};
   let multiPipeline = 0;
+  const candidateAllocations: Record<string, number> = {};
+  const intentBreakdown: Record<string, number> = {};
+  const decisionBreakdown: Record<string, number> = {};
+  let pendingDecisionCount = 0;
+  const willAttendCandidates = new Set<string>();
 
-  if (hasReadableApplications) {
-    apps.forEach((app) => {
-      statusBreakdown[app.status] = (statusBreakdown[app.status] || 0) + 1;
-      if (app.category) {
-        categoryBreakdown[app.category] = (categoryBreakdown[app.category] || 0) + 1;
-      }
-    });
-
-    const candidateApps: Record<string, number> = {};
-    apps.forEach((app) => {
-      candidateApps[app.candidate_id] = (candidateApps[app.candidate_id] || 0) + 1;
-    });
-    multiPipeline = Object.values(candidateApps).filter((count) => count > 1).length;
-    categoryBreakdown.Pending = 0;
-  } else {
-    // Fallback source: candidate_allocations (current workflow table)
-    const { count: allocationCount } = await supabase
+  let offset = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data: allocationRows, error: allocationError } = await supabase
       .from('candidate_allocations')
-      .select('candidate_id', { count: 'exact', head: true });
-    totalApplications = allocationCount || 0;
+      .select('candidate_id, intent, company_decision')
+      .range(offset, offset + pageSize - 1);
 
-    const candidateAllocations: Record<string, number> = {};
-    const intentBreakdown: Record<string, number> = {};
-    const decisionBreakdown: Record<string, number> = {};
-    let pendingDecisionCount = 0;
-    const willAttendCandidates = new Set<string>();
-
-    let offset = 0;
-    const pageSize = 1000;
-    while (true) {
-      const { data: allocationRows, error: allocationError } = await supabase
-        .from('candidate_allocations')
-        .select('candidate_id, intent, company_decision')
-        .range(offset, offset + pageSize - 1);
-
-      if (allocationError || !allocationRows || allocationRows.length === 0) {
-        break;
-      }
-
-      allocationRows.forEach((row) => {
-        const candidateId = String(row.candidate_id || '').trim();
-        if (!candidateId) return;
-
-        candidateAllocations[candidateId] = (candidateAllocations[candidateId] || 0) + 1;
-
-        const intent = String(row.intent || 'Pending').trim() || 'Pending';
-        intentBreakdown[intent] = (intentBreakdown[intent] || 0) + 1;
-        if (intent.toLowerCase() === 'will attend') {
-          willAttendCandidates.add(candidateId);
-        }
-
-        const decision = String(row.company_decision || '').trim();
-        if (decision) {
-          decisionBreakdown[decision] = (decisionBreakdown[decision] || 0) + 1;
-        } else {
-          pendingDecisionCount += 1;
-        }
-      });
-
-      if (allocationRows.length < pageSize) {
-        break;
-      }
-      offset += pageSize;
+    if (allocationError || !allocationRows || allocationRows.length === 0) {
+      break;
     }
 
-    multiPipeline = Object.values(candidateAllocations).filter((count) => count > 1).length;
-    statusBreakdown = {
-      ...intentBreakdown,
-      'Interview Scheduled': willAttendCandidates.size,
-    };
-    categoryBreakdown = {
-      ...decisionBreakdown,
-      Pending: pendingDecisionCount,
-    };
+    allocationRows.forEach((row) => {
+      const candidateId = String(row.candidate_id || '').trim();
+      if (!candidateId) return;
+
+      candidateAllocations[candidateId] = (candidateAllocations[candidateId] || 0) + 1;
+
+      const intent = String(row.intent || 'Pending').trim() || 'Pending';
+      intentBreakdown[intent] = (intentBreakdown[intent] || 0) + 1;
+      if (intent.toLowerCase() === 'will attend') {
+        willAttendCandidates.add(candidateId);
+      }
+
+      const decision = String(row.company_decision || '').trim();
+      if (decision) {
+        decisionBreakdown[decision] = (decisionBreakdown[decision] || 0) + 1;
+      } else {
+        pendingDecisionCount += 1;
+      }
+    });
+
+    if (allocationRows.length < pageSize) {
+      break;
+    }
+    offset += pageSize;
   }
+
+  multiPipeline = Object.values(candidateAllocations).filter((count) => count > 1).length;
+  statusBreakdown = {
+    ...intentBreakdown,
+    'Interview Scheduled': willAttendCandidates.size,
+  };
+  categoryBreakdown = {
+    ...decisionBreakdown,
+    Pending: pendingDecisionCount,
+  };
 
   return {
     totalCandidates: candidateCount || 0,

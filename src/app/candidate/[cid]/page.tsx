@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 import {
   getCandidateById,
   getCandidateRouting,
@@ -186,10 +187,10 @@ export default function CandidateDashboard() {
           </div>
         )}
 
-        {/* Company List (Live Distribution) */}
+        {/* Company List */}
         {routing && routing.companies.length > 0 && (
           <div className="animate-fade-in-up glass-card" style={S.routingCard}>
-            <h3 style={S.profileTitle}>🏢 Recommended Companies (High Vacancy)</h3>
+            <h3 style={S.profileTitle}>🏢 Recommended Companies</h3>
             <div style={S.tableContainer}>
               <table style={S.table}>
                 <thead>
@@ -197,7 +198,6 @@ export default function CandidateDashboard() {
                     <th style={S.th}>Company Name</th>
                     <th style={S.th}>Status</th>
                     <th style={S.th}>Intent</th>
-                    <th style={S.th}>Vacancies</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -238,14 +238,13 @@ export default function CandidateDashboard() {
                             <option value="Will Attend">Will Attend</option>
                           </select>
                         </td>
-                        <td style={S.td}>{company.vacancy ?? 0}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <p style={S.routingNote}>Showing top 5 companies with available spots in your sector.</p>
+            <p style={S.routingNote}>Showing top 5 mapped companies for your profile.</p>
           </div>
         )}
 
@@ -276,13 +275,7 @@ export default function CandidateDashboard() {
           )}
         </div>
 
-        {/* Local Footer */}
-        <footer style={S.footer}>
-          <div style={S.poweredBy}>
-            <span style={S.poweredText}>POWERED BY</span>
-            <Image src="/applywizz_logo.png" alt="ApplyWizz" width={140} height={40} style={S.poweredLogo} />
-          </div>
-        </footer>
+        <ApplyWizzFooter style={S.footer} />
       </div>
     </div>
   );
@@ -386,24 +379,7 @@ const S: Record<string, React.CSSProperties> = {
   nextStepText: { fontSize: "0.85rem", color: "#475569" },
   footer: {
     marginTop: "32px",
-    paddingTop: "20px",
-    borderTop: "1px solid rgba(0,26,61,0.06)",
+    paddingTop: "0",
     textAlign: "center",
-  },
-  poweredBy: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-  },
-  poweredText: {
-    fontSize: "0.65rem",
-    fontWeight: 800,
-    color: "#475569",
-    letterSpacing: "0.1em",
-  },
-  poweredLogo: {
-    height: "32px",
-    width: "auto",
   },
 };

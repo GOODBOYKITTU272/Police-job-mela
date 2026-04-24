@@ -9,6 +9,7 @@ import {
   HrAllocatedCandidatePreview,
   updateCandidateAllocationDecision,
 } from "@/lib/supabase";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 
 export default function HrCandidatesPage() {
   const router = useRouter();
@@ -18,6 +19,13 @@ export default function HrCandidatesPage() {
   const [selectedCandidate, setSelectedCandidate] =
     useState<HrAllocatedCandidatePreview | null>(null);
   const [savingDecisionFor, setSavingDecisionFor] = useState<string | null>(null);
+  const [decisionFilter, setDecisionFilter] = useState<
+    "All" | "No Show" | "Not Selected" | "Selected"
+  >("All");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem("hr-authenticated") === "true";
@@ -44,10 +52,34 @@ export default function HrCandidatesPage() {
     router.push("/hr/login");
   };
 
-  const filteredCandidates =
-    intentFilter === "All"
-      ? candidates
-      : candidates.filter((candidate) => candidate.intent === intentFilter);
+  const filteredCandidates = candidates.filter((candidate) => {
+    const intentMatches = intentFilter === "All" || candidate.intent === intentFilter;
+    const decisionMatches =
+      decisionFilter === "All" || candidate.company_decision === decisionFilter;
+    const query = searchQuery.trim().toLowerCase();
+    const searchMatches =
+      !query ||
+      candidate.id.toLowerCase().includes(query) ||
+      (candidate.name || "").toLowerCase().includes(query);
+    return intentMatches && decisionMatches && searchMatches;
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedCandidates = filteredCandidates.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+  const companyName =
+    (candidates[0]?.allocated_company_name || "").trim() || "Your Company";
+  const pendingCount = filteredCandidates.filter(
+    (candidate) => !candidate.company_decision
+  ).length;
+  const selectedCount = filteredCandidates.filter(
+    (candidate) => candidate.company_decision === "Selected"
+  ).length;
+  const rejectedCount = filteredCandidates.filter(
+    (candidate) => candidate.company_decision === "Not Selected"
+  ).length;
 
   const getDecisionKey = (candidate: HrAllocatedCandidatePreview) =>
     `${candidate.id}::${candidate.allocated_company_name}`;
@@ -110,7 +142,7 @@ export default function HrCandidatesPage() {
         <header style={styles.header}>
           <div>
             <p style={styles.kicker}>HR Dashboard</p>
-            <h1 style={styles.title}>List of Candidates</h1>
+            <h1 style={styles.title}>Company Dashboard: {companyName}</h1>
             <p style={styles.subtitle}>
               Showing candidates allocated to your company.
             </p>
@@ -125,17 +157,39 @@ export default function HrCandidatesPage() {
           </div>
         </header>
 
+        <section style={styles.summaryRow}>
+          <div className="stat-card blue" style={styles.summaryCard}>
+            <div className="stat-value">{filteredCandidates.length}</div>
+            <div className="stat-label">Visible Candidates</div>
+          </div>
+          <div className="stat-card teal" style={styles.summaryCard}>
+            <div className="stat-value">{pendingCount}</div>
+            <div className="stat-label">Pending Decision</div>
+          </div>
+          <div className="stat-card green" style={styles.summaryCard}>
+            <div className="stat-value">{selectedCount}</div>
+            <div className="stat-label">Selected</div>
+          </div>
+          <div className="stat-card purple" style={styles.summaryCard}>
+            <div className="stat-value">{rejectedCount}</div>
+            <div className="stat-label">Not Selected</div>
+          </div>
+        </section>
+
         <section style={styles.filterBar}>
           <div style={styles.filterBarInner}>
             <div style={styles.filterLeft}>
-              <span style={styles.filterLabel}>Filter by Intent</span>
+              <span style={styles.filterLabel}>Filters</span>
               <div style={styles.filterButtonsWrap}>
                 {(["All", "Pending", "Not Interested", "Will Attend"] as const).map(
                   (option) => (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setIntentFilter(option)}
+                      onClick={() => {
+                        setIntentFilter(option);
+                        setPage(1);
+                      }}
                       style={{
                         ...styles.filterBtn,
                         ...(intentFilter === option
@@ -147,6 +201,26 @@ export default function HrCandidatesPage() {
                     </button>
                   )
                 )}
+                {(["No Show", "Not Selected", "Selected"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() =>
+                      setDecisionFilter((prev) => {
+                        setPage(1);
+                        return prev === option ? "All" : option;
+                      })
+                    }
+                    style={{
+                      ...styles.filterBtn,
+                      ...(decisionFilter === option
+                        ? styles.filterBtnActive
+                        : styles.filterBtnInactive),
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             </div>
             {!loading ? (
@@ -155,6 +229,54 @@ export default function HrCandidatesPage() {
                 {filteredCandidates.length === 1 ? "candidate" : "candidates"}
               </span>
             ) : null}
+            <div style={styles.viewToggle}>
+              <div style={styles.searchWrap}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Search CID or Name..."
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.searchInput}
+                />
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setPage(1);
+                    }}
+                    style={styles.clearSearchBtn}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                style={{
+                  ...styles.filterBtn,
+                  ...(viewMode === "grid" ? styles.filterBtnActive : styles.filterBtnInactive),
+                }}
+              >
+                Grid View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                style={{
+                  ...styles.filterBtn,
+                  ...(viewMode === "table" ? styles.filterBtnActive : styles.filterBtnInactive),
+                }}
+              >
+                Table View
+              </button>
+            </div>
           </div>
         </section>
 
@@ -163,44 +285,117 @@ export default function HrCandidatesPage() {
             Loading candidates...
           </div>
         ) : (
-          <div style={styles.grid}>
-            {filteredCandidates.map((candidate) => (
-              <article key={candidate.id} className="glass-card" style={styles.card}>
-                <div style={styles.cardTop}>
-                  <h2 style={styles.name}>{candidate.name || "Unnamed Candidate"}</h2>
-                  <span style={styles.cid}>{candidate.id}</span>
+          viewMode === "grid" ? (
+            <div style={styles.grid}>
+              {pagedCandidates.map((candidate) => (
+                <article key={candidate.id} className="glass-card" style={styles.card}>
+                  <div style={styles.cardTop}>
+                    <h2 style={styles.name}>{candidate.name || "Unnamed Candidate"}</h2>
+                    <span style={styles.cid}>{candidate.id}</span>
+                  </div>
+
+                  <div style={styles.infoGrid}>
+                    <InfoRow
+                      label="Allocated Company"
+                      value={candidate.allocated_company_name}
+                    />
+                    <IntentRow intent={candidate.intent} />
+                    <DecisionRow
+                      value={candidate.company_decision}
+                      disabled={savingDecisionFor === getDecisionKey(candidate)}
+                      onChange={(value) => handleDecisionChange(candidate, value)}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCandidate(candidate)}
+                      style={styles.viewMoreBtn}
+                    >
+                      View More Details
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {pagedCandidates.length === 0 ? (
+                <div className="glass-card" style={styles.emptyCard}>
+                  No candidates found for selected filters.
                 </div>
-
-                <div style={styles.infoGrid}>
-                  <InfoRow
-                    label="Allocated Company"
-                    value={candidate.allocated_company_name}
-                  />
-                  <IntentRow intent={candidate.intent} />
-                  <DecisionRow
-                    value={candidate.company_decision}
-                    disabled={savingDecisionFor === getDecisionKey(candidate)}
-                    onChange={(value) => handleDecisionChange(candidate, value)}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCandidate(candidate)}
-                    style={styles.viewMoreBtn}
-                  >
-                    View More Details
-                  </button>
-                </div>
-              </article>
-            ))}
-
-            {filteredCandidates.length === 0 ? (
-              <div className="glass-card" style={styles.emptyCard}>
-                No candidates found for the selected intent.
+              ) : null}
+            </div>
+          ) : (
+            <div className="glass-card" style={styles.tableWrap}>
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHeader}>
+                      <th style={styles.th}>CID</th>
+                      <th style={styles.th}>Name</th>
+                      <th style={styles.th}>Intent</th>
+                      <th style={styles.th}>Decision</th>
+                      <th style={styles.th}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedCandidates.map((candidate) => (
+                      <tr key={`${candidate.id}-${candidate.allocated_company_name}`} style={styles.tableRow}>
+                        <td style={styles.td}>{candidate.id}</td>
+                        <td style={styles.td}>{candidate.name || "-"}</td>
+                        <td style={styles.td}>
+                          <IntentRow intent={candidate.intent} />
+                        </td>
+                        <td style={styles.td}>
+                          <DecisionRow
+                            value={candidate.company_decision}
+                            disabled={savingDecisionFor === getDecisionKey(candidate)}
+                            onChange={(value) => handleDecisionChange(candidate, value)}
+                          />
+                        </td>
+                        <td style={styles.td}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCandidate(candidate)}
+                            style={styles.viewMoreBtn}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : null}
-          </div>
+            </div>
+          )
         )}
+
+        {filteredCandidates.length > 0 ? (
+          <div style={styles.paginationWrap}>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              style={styles.paginationBtn}
+            >
+              Previous
+            </button>
+            <span style={styles.paginationText}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              style={styles.paginationBtn}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+
+        <ApplyWizzFooter />
 
         {selectedCandidate ? (
           <div style={styles.modalOverlay} onClick={() => setSelectedCandidate(null)}>
@@ -286,6 +481,15 @@ function DecisionRow({
   disabled?: boolean;
   onChange: (value: string) => void;
 }) {
+  const decisionStyle =
+    value === "Selected"
+      ? styles.decisionSelected
+      : value === "Not Selected"
+      ? styles.decisionNotSelected
+      : value === "No Show"
+      ? styles.decisionNoShow
+      : undefined;
+
   return (
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>Company Decision</span>
@@ -294,7 +498,7 @@ function DecisionRow({
         value={value || ""}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        style={styles.decisionSelect}
+        style={{ ...styles.decisionSelect, ...decisionStyle }}
       >
         <option value="">Select</option>
         <option value="No Show">No Show</option>
@@ -308,10 +512,12 @@ function DecisionRow({
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    padding: "28px 16px",
+    padding: "28px 20px",
+    background:
+      "radial-gradient(circle at top right, rgba(0,26,61,0.05), transparent 40%), #f8faff",
   },
   main: {
-    maxWidth: "1120px",
+    maxWidth: "1280px",
     margin: "0 auto",
   },
   header: {
@@ -332,7 +538,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   filterBar: {
     marginBottom: "18px",
-    padding: "4px 0 10px 0",
+    padding: "14px",
+    borderRadius: "14px",
+    background: "#ffffff",
+    border: "1px solid rgba(0,26,61,0.08)",
+    boxShadow: "0 8px 22px rgba(2,6,23,0.06)",
+  },
+  summaryRow: {
+    marginBottom: "14px",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "12px",
+  },
+  summaryCard: {
+    padding: "14px 16px",
   },
   filterBarInner: {
     display: "flex",
@@ -368,6 +587,42 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: "8px",
     flexWrap: "wrap",
+  },
+  viewToggle: {
+    display: "flex",
+    gap: "8px",
+    marginLeft: "auto",
+    flexWrap: "nowrap",
+    alignItems: "center",
+    minWidth: 0,
+  },
+  searchWrap: {
+    position: "relative",
+    flex: "1 1 280px",
+    minWidth: "220px",
+  },
+  searchInput: {
+    width: "100%",
+    padding: "8px 12px",
+    paddingRight: "34px",
+    borderRadius: "999px",
+    fontSize: "0.85rem",
+  },
+  clearSearchBtn: {
+    position: "absolute",
+    right: "8px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "22px",
+    height: "22px",
+    borderRadius: "999px",
+    border: "none",
+    background: "rgba(100,116,139,0.15)",
+    color: "#334155",
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    cursor: "pointer",
+    lineHeight: 1,
   },
   filterBtn: {
     borderRadius: "999px",
@@ -505,6 +760,73 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 10px",
     borderRadius: "10px",
     fontSize: "0.88rem",
+  },
+  decisionSelected: {
+    borderColor: "rgba(16,185,129,0.45)",
+    color: "#047857",
+    background: "rgba(16,185,129,0.08)",
+  },
+  decisionNotSelected: {
+    borderColor: "rgba(239,68,68,0.45)",
+    color: "#b91c1c",
+    background: "rgba(239,68,68,0.08)",
+  },
+  decisionNoShow: {
+    borderColor: "rgba(251,146,60,0.45)",
+    color: "#c2410c",
+    background: "rgba(251,146,60,0.08)",
+  },
+  tableWrap: {
+    padding: "10px",
+    border: "1px solid rgba(0,26,61,0.08)",
+    borderRadius: "16px",
+    background: "#ffffff",
+    boxShadow: "0 8px 24px rgba(2,6,23,0.06)",
+  },
+  tableContainer: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    minWidth: "780px",
+  },
+  tableHeader: {
+    borderBottom: "1px solid rgba(0,26,61,0.12)",
+  },
+  th: {
+    textAlign: "left",
+    padding: "12px 14px",
+    fontSize: "0.75rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "#64748b",
+    fontWeight: 700,
+  },
+  tableRow: {
+    borderBottom: "1px solid rgba(0,26,61,0.07)",
+  },
+  td: {
+    padding: "12px 14px",
+    color: "#0f172a",
+    verticalAlign: "top",
+  },
+  paginationWrap: {
+    marginTop: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
+  paginationBtn: {
+    minWidth: "96px",
+    padding: "8px 14px",
+  },
+  paginationText: {
+    fontSize: "0.9rem",
+    color: "#475569",
+    fontWeight: 700,
   },
   modalOverlay: {
     position: "fixed",

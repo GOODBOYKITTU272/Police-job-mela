@@ -9,6 +9,7 @@ import {
   Candidate,
   CompanyDirectoryRow,
 } from "@/lib/supabase";
+import ApplyWizzFooter from "@/app/components/ApplyWizzFooter";
 
 function AdminDashboard() {
   const router = useRouter();
@@ -25,7 +26,7 @@ function AdminDashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [search, setSearch] = useState("");
   const [directoryView, setDirectoryView] = useState<"companies" | "candidates">(
-    "companies"
+    "candidates"
   );
   const [companySort, setCompanySort] = useState<{
     key:
@@ -242,22 +243,6 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => {
-                    setDirectoryView("companies");
-                    setPage(1);
-                    setSearch("");
-                  }}
-                  style={{
-                    ...S.toggleBtn,
-                    ...(directoryView === "companies"
-                      ? S.toggleBtnActive
-                      : S.toggleBtnInactive),
-                  }}
-                >
-                  Company Directory
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
                     setDirectoryView("candidates");
                     setPage(1);
                     setSearch("");
@@ -271,6 +256,22 @@ function AdminDashboard() {
                 >
                   Candidate Directory
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDirectoryView("companies");
+                    setPage(1);
+                    setSearch("");
+                  }}
+                  style={{
+                    ...S.toggleBtn,
+                    ...(directoryView === "companies"
+                      ? S.toggleBtnActive
+                      : S.toggleBtnInactive),
+                  }}
+                >
+                  Company Directory
+                </button>
               </div>
             </div>
             <input
@@ -279,7 +280,7 @@ function AdminDashboard() {
               placeholder={
                 directoryView === "companies"
                   ? "Search by Company, Sector, Education, Vacancy, or Counts..."
-                  : "Search by Name, CID, or Email..."
+                  : "Search by Name, CID, Email, or Phone..."
               }
               value={search}
               onChange={(e) => {
@@ -457,6 +458,7 @@ function AdminDashboard() {
             </div>
           )}
         </section>
+        <ApplyWizzFooter />
       </div>
     </div>
   );
