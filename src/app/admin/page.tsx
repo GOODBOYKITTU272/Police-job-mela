@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { ApplyWizzFooter } from "@/app/components/ApplyWizzFooter";
 import {
   getAdminStats,
   getAllCandidates,
