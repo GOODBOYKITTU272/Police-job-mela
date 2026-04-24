@@ -40,9 +40,9 @@ function AdminDashboard() {
     direction: "asc" | "desc";
   }>({ key: "company_name", direction: "asc" });
   const [candidateSort, setCandidateSort] = useState<{
-    key: "id" | "name" | "email" | "created_at";
+    key: "id" | "name" | "email" | "phone";
     direction: "asc" | "desc";
-  }>({ key: "created_at", direction: "desc" });
+  }>({ key: "id", direction: "asc" });
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -78,7 +78,8 @@ function AdminDashboard() {
     (c) =>
       c.id.toLowerCase().includes(search.toLowerCase()) ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
+      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      (c.phone || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const filteredCompanies = companies.filter((company) => {
@@ -148,7 +149,7 @@ function AdminDashboard() {
     setPage(1);
   };
 
-  const toggleCandidateSort = (key: "id" | "name" | "email" | "created_at") => {
+  const toggleCandidateSort = (key: "id" | "name" | "email" | "phone") => {
     setCandidateSort((prev) => ({
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
@@ -384,8 +385,8 @@ function AdminDashboard() {
                         </button>
                       </th>
                       <th style={S.th}>
-                        <button type="button" style={S.sortBtn} onClick={() => toggleCandidateSort("created_at")}>
-                          Joined {getSortIndicator(candidateSort, "created_at")}
+                        <button type="button" style={S.sortBtn} onClick={() => toggleCandidateSort("phone")}>
+                          Phone {getSortIndicator(candidateSort, "phone")}
                         </button>
                       </th>
                       <th style={{ ...S.th, textAlign: "right" }}>Action</th>
@@ -405,7 +406,7 @@ function AdminDashboard() {
                         </td>
                         <td style={{ ...S.td, fontWeight: 600 }}>{c.name}</td>
                         <td style={S.td}>{c.email}</td>
-                        <td style={S.td}>{new Date(c.created_at).toLocaleDateString()}</td>
+                        <td style={S.td}>{c.phone || "-"}</td>
                         <td style={{ ...S.td, textAlign: "right" }}>
                           <button
                             className="btn-ghost"

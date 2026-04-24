@@ -134,6 +134,10 @@ export interface CompanyDirectoryRow {
   selected_count?: number;
 }
 
+function normalizeCompanyName(value: unknown): string {
+  return String(value || '').trim().toLowerCase();
+}
+
 function normalizeNumberValue(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -191,13 +195,27 @@ export async function getCandidateById(input: string): Promise<CandidateWithAppl
 }
 
 export async function getAllCandidates(): Promise<Candidate[]> {
-  const { data, error } = await supabase
-    .from('candidates')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const pageSize = 1000;
+  let from = 0;
+  const allRows: Candidate[] = [];
 
-  if (error) return [];
-  return data || [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('candidates')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) return allRows;
+
+    const batch = (data || []) as Candidate[];
+    allRows.push(...batch);
+
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allRows;
 }
 
 export type CompanyLoginResult =
@@ -690,19 +708,46 @@ export async function getAllJobs(): Promise<Job[]> {
 export async function getAllCompanies(): Promise<CompanyDirectoryRow[]> {
   const tableNames = ['Company_details', 'company_details'];
 
-  const { data: allocationRows } = await supabase
-    .from('candidate_allocations')
-    .select('company_name, company_decision');
+  type AllocationRow = {
+    company_name: string | null;
+    candidate_id: string | null;
+    company_decision: string | null;
+  };
 
+  const allocationRows: AllocationRow[] = [];
+  const allocationPageSize = 1000;
+  let allocationFrom = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('candidate_allocations')
+      .select('company_name, candidate_id, company_decision')
+      .range(allocationFrom, allocationFrom + allocationPageSize - 1);
+
+    if (error) break;
+
+    const batch = (data || []) as AllocationRow[];
+    allocationRows.push(...batch);
+
+    if (batch.length < allocationPageSize) break;
+    allocationFrom += allocationPageSize;
+  }
+
+  const distinctCandidatesByCompany = new Map<string, Set<string>>();
   const liveAssignedCount = new Map<string, number>();
   const decisionBreakdown = new Map<
     string,
     { noShow: number; notSelected: number; selected: number }
   >();
-  (allocationRows || []).forEach((row) => {
-    const companyKey = String(row.company_name || '').trim().toLowerCase();
+  allocationRows.forEach((row) => {
+    const companyKey = normalizeCompanyName(row.company_name);
     if (!companyKey) return;
-    liveAssignedCount.set(companyKey, (liveAssignedCount.get(companyKey) || 0) + 1);
+
+    const candidateId = String(row.candidate_id || '').trim();
+    if (candidateId) {
+      const existingSet = distinctCandidatesByCompany.get(companyKey) || new Set<string>();
+      existingSet.add(candidateId);
+      distinctCandidatesByCompany.set(companyKey, existingSet);
+    }
 
     const existing = decisionBreakdown.get(companyKey) || {
       noShow: 0,
@@ -716,8 +761,12 @@ export async function getAllCompanies(): Promise<CompanyDirectoryRow[]> {
     if (decision === 'selected') existing.selected += 1;
 
     decisionBreakdown.set(companyKey, existing);
+
   });
 
+  distinctCandidatesByCompany.forEach((candidateSet, companyKey) => {
+    liveAssignedCount.set(companyKey, candidateSet.size);
+  });
   for (const tableName of tableNames) {
     const { data, error } = await supabase
       .from(tableName)
@@ -725,23 +774,23 @@ export async function getAllCompanies(): Promise<CompanyDirectoryRow[]> {
       .order('company_name', { ascending: true });
 
     if (!error && data) {
-      return (data as Record<string, unknown>[]).map((row) => ({
-        company_name: String(row.company_name || '').trim(),
-        sector: row.sector ? String(row.sector) : null,
-        education: row.education ? String(row.education) : null,
-        vacancy: normalizeNumberValue(row.vacancy),
-        assigned_count:
-          liveAssignedCount.get(String(row.company_name || '').trim().toLowerCase()) || 0,
-        no_show_count:
-          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
-            ?.noShow || 0,
-        not_selected_count:
-          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
-            ?.notSelected || 0,
-        selected_count:
-          decisionBreakdown.get(String(row.company_name || '').trim().toLowerCase())
-            ?.selected || 0,
-      }));
+      return (data as Record<string, unknown>[]).map((row) => {
+        const companyKey = normalizeCompanyName(row.company_name);
+
+        return {
+          company_name: String(row.company_name || '').trim(),
+          sector: row.sector ? String(row.sector) : null,
+          education: row.education ? String(row.education) : null,
+          vacancy: normalizeNumberValue(row.vacancy),
+          assigned_count: liveAssignedCount.get(companyKey) || 0,
+          no_show_count:
+            decisionBreakdown.get(companyKey)?.noShow || 0,
+          not_selected_count:
+            decisionBreakdown.get(companyKey)?.notSelected || 0,
+          selected_count:
+            decisionBreakdown.get(companyKey)?.selected || 0,
+        };
+      });
     }
   }
 
